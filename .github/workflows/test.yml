@@ -6,8 +6,9 @@ jobs:
   test:   # every extension against SDEM's made-up examples (EXT-14)
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
-        python: ['3.9', '3.12']
+        python: ['3.10', '3.11', '3.12', '3.13']   # as SDEM's own CI
     steps:
       - uses: actions/checkout@v4
       - uses: actions/checkout@v4

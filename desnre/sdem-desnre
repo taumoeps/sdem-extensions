@@ -1,0 +1,6 @@
+#!/usr/bin/env python3
+"""Run the extension without installing it: tools/sdem-desnre/sdem-desnre … (installed, it is sdem desnre …)."""
+import os, sys
+sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
+from sdem_desnre import entry
+entry()

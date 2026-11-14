@@ -1,0 +1,30 @@
+name: Test extensions
+on:
+  push:
+  pull_request:
+jobs:
+  test:   # every extension against SDEM's made-up examples (EXT-14)
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ['3.9', '3.12']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: taumoeps/bian-sdem-framework
+          path: bian-sdem-framework
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install SDEM and the extensions
+        run: |
+          pip install ./bian-sdem-framework
+          pip install ./desnre ./template
+          sdem extensions
+      - name: Tests
+        env:
+          SDEM_HOME: ${{ github.workspace }}/bian-sdem-framework
+        run: |
+          python -m unittest discover -s desnre/tests -v
+          python -m unittest discover -s template/tests -v

@@ -1,0 +1,17 @@
+{
+  "name": "hello",
+  "command": "sdem-hello",
+  "version": "0.1.0",
+  "description": "A template SDEM extension: shows a workspace's check result — copy it to start your own",
+  "kind": ["checker"],
+  "sdem": ">=0.18,<0.19",
+  "metamodel": ">=0.14,<0.15",
+  "uses": ["--version", "check --json"],
+  "reads": ["the workspace, through sdem check"],
+  "writes": "nothing",
+  "sends_to": [],
+  "data": "any",
+  "owner": "the sdem-extensions maintainers",
+  "licence": "Apache-2.0",
+  "contract": "SDEM extension contract EXT-01…EXT-15 (taumoeps/bian-sdem-framework: docs/design/sdem-extensions-spec.md)"
+}

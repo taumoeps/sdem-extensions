@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sdem-hello"
+version = "0.1.0"
+description = "A template SDEM extension — copy it to start your own"
+requires-python = ">=3.9"
+license = {text = "Apache-2.0"}
+dependencies = []
+
+[project.scripts]
+sdem-hello = "sdem_hello:entry"
+
+[tool.setuptools]
+packages = ["sdem_hello"]
+
+[tool.setuptools.package-data]
+sdem_hello = ["*.json"]

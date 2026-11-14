@@ -1,0 +1,34 @@
+{
+  "name": "desnre",
+  "command": "sdem-desnre",
+  "version": "0.1.0",
+  "description": "Publishes a synthetic SDEM workspace to the DESNRE site's 3D view, as a draft a person approves",
+  "kind": [
+    "publisher"
+  ],
+  "sdem": ">=0.18,<0.19",
+  "metamodel": ">=0.14,<0.15",
+  "uses": [
+    "--version",
+    "check --json",
+    "layout --layer A1|A2|A3 --json",
+    "zones --layout --json"
+  ],
+  "reads": [
+    "a1-business.json",
+    "a2-service-domain.json",
+    "a3-application.json",
+    "a4-technology.json",
+    "mappings.json",
+    "extensions/desnre.json"
+  ],
+  "writes": "nothing in the workspace, except extensions/desnre.json when a person runs `sdem-desnre mark`",
+  "sends_to": [
+    "https://desnre.vercel.app/api/models"
+  ],
+  "data": "synthetic only",
+  "owner": "the sdem-extensions maintainers",
+  "licence": "Apache-2.0",
+  "contract": "SDEM extension contract EXT-01…EXT-15 (taumoeps/bian-sdem-framework: docs/design/sdem-extensions-spec.md)",
+  "home": "https://github.com/taumoeps/sdem-extensions/tree/main/desnre"
+}

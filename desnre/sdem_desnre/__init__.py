@@ -1,15 +1,15 @@
-"""sdem desnre — puts a made-up SDEM workspace on the DESNRE site's 3D view.
+"""sdem desnre — puts a made-up SDEM workspace on your own page of the DESNRE site, as a 3D view.
 
-    sdem desnre create <workspace>       check it, build the 3D model and send it as a draft — not public; opens the preview
-    sdem desnre publish <workspace>      a person makes the draft live: https://desnre.vercel.app/?model=<name>
-    sdem desnre list                     what is live
-    sdem desnre remove <workspace>       take it off the site
+    sdem desnre login                    once: paste a token from desnre.vercel.app/account (kept in your Keychain)
+    sdem desnre create <workspace>       check it, build the 3D model, send it as a draft — not public; opens the preview
+    sdem desnre publish <workspace>      make it live on your page: desnre.vercel.app/u/<you>/<name>
+    sdem desnre list | whoami | remove <workspace> | logout
 
-The first SDEM extension (SDEM's docs/design/sdem-extensions-spec.md, EXT-01…EXT-15; docs/desnre-publish-design.md,
-DP-01…DP-16 in the DESNRE site). Installed next to SDEM (pip install <this folder>), it runs as `sdem desnre …`; on its own
-as `sdem-desnre …`. It uses SDEM only through its command line with --json and the workspace files — never SDEM's code.
-The first `create` asks you to confirm the workspace is made-up data, and records who said so. Tokens come from the
-environment (DESNRE_PUBLISH_TOKEN, DESNRE_APPROVE_TOKEN) or, on a Mac, the Keychain under the same names. Standard library only.
+The first SDEM extension (SDEM's docs/design/sdem-extensions-spec.md, EXT-01…EXT-15; the DESNRE site's
+docs/desnre-publish-design.md and desnre-accounts-design.md). Installed next to SDEM (pip install), it runs as `sdem desnre …`;
+on its own as `sdem-desnre …`. It uses SDEM only through its command line with --json and the workspace files — never SDEM's
+code. The first `create` of a workspace asks you to confirm it is made-up data, and records who said so. Your token comes from
+the environment (DESNRE_TOKEN) or, on a Mac, the Keychain. The hero page is the site owner's (--hero). Standard library only.
 """
 import argparse, datetime, json, math, os, re, shlex, shutil, subprocess, sys, urllib.error, urllib.request, webbrowser
 from pathlib import Path
@@ -374,7 +374,7 @@ def dumps(model):
     return json.dumps(model, ensure_ascii=False, separators=(',', ':')) + '\n'
 
 
-# ---------- the site's API (DP-05, DP-10…DP-13) ----------
+# ---------- the site's API (DP-05, DP-10…DP-13; accounts DA-30, DA-40) ----------
 
 def token(key):
     """A token from the environment or, on a Mac, the login Keychain (security find-generic-password -s <key>) — never a file (EXT-12)."""
@@ -387,13 +387,25 @@ def token(key):
     return ''
 
 
-def call(method, path, token_env=None, body=None, site=None):
+def keep_token(value):
+    """DA-40: the personal token goes in the Mac's Keychain; elsewhere the person sets DESNRE_TOKEN themselves. True if kept."""
+    if sys.platform == 'darwin' and shutil.which('security'):
+        user = os.environ.get('USER', 'desnre')
+        return subprocess.run(['security', 'add-generic-password', '-U', '-a', user, '-s', 'DESNRE_TOKEN', '-w', value],
+                              capture_output=True).returncode == 0
+    return False
+
+
+def forget_token():
+    if sys.platform == 'darwin' and shutil.which('security'):
+        return subprocess.run(['security', 'delete-generic-password', '-s', 'DESNRE_TOKEN'], capture_output=True).returncode == 0
+    return False
+
+
+def call(method, path, tok=None, body=None, site=None):
     url = (site or SITE).rstrip('/') + path
     headers = {'Content-Type': 'application/json', 'User-Agent': GENERATOR}
-    if token_env:
-        tok = token(token_env)
-        if not tok:
-            raise PublishError(f'{token_env} is not set — put it in the environment, or on a Mac in the Keychain under that name; never in a file (EXT-12)')
+    if tok:
         headers['Authorization'] = 'Bearer ' + tok
     req = urllib.request.Request(url, data=body.encode('utf-8') if body is not None else None, method=method, headers=headers)
     try:
@@ -405,6 +417,33 @@ def call(method, path, token_env=None, body=None, site=None):
         raise PublishError(f'{method} {url}: {e.code} {why or e.reason}')
     except urllib.error.URLError as e:
         raise PublishError(f'{method} {url}: {e.reason}')
+
+
+def signed_in(site):
+    """The person's token and who it belongs to — or a plain instruction to sign in (DA-40)."""
+    tok = token('DESNRE_TOKEN')
+    if not tok:
+        raise PublishError(f"you are not signed in — create a token on {(site or SITE).rstrip('/')}/account, then: sdem desnre login")
+    return tok, call('GET', '/api/me', tok, None, site)
+
+
+class Target:
+    """Where a model goes: the person's own page (/u/<username>/<name>, the default) or — for the site's owner — the hero page."""
+    def __init__(self, a):
+        self.site, self.hero = a.site, getattr(a, 'hero', False)
+        if self.hero:   # the owner's personal token (an admin), else the two shared tokens while they last (DA-42)
+            mine = token('DESNRE_TOKEN')
+            self.send_tok, self.live_tok = (mine, mine) if mine else (token('DESNRE_PUBLISH_TOKEN'), token('DESNRE_APPROVE_TOKEN'))
+            if not self.send_tok:
+                raise PublishError('the hero page is the site owner\'s — sign in with an admin account (sdem desnre login)')
+            self.user = ''
+        else:
+            tok, me = signed_in(a.site)
+            self.send_tok = self.live_tok = tok
+            self.user = me['username']
+
+    def path(self, name):
+        return f'/api/models/{name}' if self.hero else f'/api/u/{self.user}/{name}'
 
 
 # ---------- the commands ----------
@@ -464,11 +503,40 @@ def remember_name(ws, name):
         m['name'] = name; p.write_text(json.dumps(m, indent=2) + '\n', encoding='utf-8')
 
 
+def cmd_login(a):
+    import getpass
+    site = (a.site or SITE).rstrip('/')
+    if sys.stdin.isatty():
+        print(f'Create a token on {site}/account, then paste it here.')
+        tok = getpass.getpass('Token: ').strip()
+    else:
+        tok = sys.stdin.readline().strip()
+    if not tok.startswith('desnre_'):
+        raise PublishError('that is not a DESNRE token — tokens start with desnre_')
+    me = call('GET', '/api/me', tok, None, a.site)
+    if keep_token(tok):
+        print(f"signed in as @{me['username']} — the token is kept in your Keychain (DESNRE_TOKEN)")
+    else:
+        print(f"signed in as @{me['username']} — keep the token as the environment variable DESNRE_TOKEN (it is not stored on this computer)")
+    print(f"your page: {me.get('page')}")
+
+
+def cmd_logout(a):
+    print('signed out — the token is removed from your Keychain' if forget_token() else 'no token was kept on this computer (unset DESNRE_TOKEN if you set it)')
+    print(f"to stop the token working anywhere, revoke it on {(a.site or SITE).rstrip('/')}/account")
+
+
+def cmd_whoami(a):
+    _, me = signed_in(a.site)
+    print(f"@{me['username']}" + (' (admin)' if me.get('admin') else '') + f" — your page: {me.get('page')}")
+
+
 def cmd_create(a):
     ws = a.workspace
     if not Path(ws, 'a1-business.json').exists():
         raise PublishError(f'{ws} is not an SDEM workspace (no a1-business.json)')
     name = a.name or name_of(ws)
+    target = None if a.dry_run else Target(a)   # signed in before anything is built
     if a.dry_run:
         model = model_for(ws, name, a.environment, a.scale, need_mark=False)
     else:
@@ -485,34 +553,43 @@ def cmd_create(a):
         print(f'written: {out}')
         if a.dry_run:
             print('dry run: nothing sent'); return
-    r = call('POST', f'/api/models/{name}', 'DESNRE_PUBLISH_TOKEN', text, a.site)
+    r = call('POST', target.path(name), target.send_tok, text, a.site)
     remember_name(ws, name)
     print(f"sent:    a draft — not public\npreview: {r.get('preview')}")
     if not a.no_open and sys.stdout.isatty():
         webbrowser.open(r.get('preview') or '')
-    print(f'\nLook at every layer, then make it live:  sdem desnre publish {ws}')
+    print(f"\nLook at every layer, then make it live:  sdem desnre publish {ws}" + (' --hero' if target.hero else ''))
 
 
 def cmd_publish(a):
+    t = Target(a)
     name = name_of(a.target)
-    r = call('POST', f'/api/models/{name}/approve', 'DESNRE_APPROVE_TOKEN', '{}', a.site)
+    r = call('POST', t.path(name) + '/approve', t.live_tok, '{}', a.site)
     print(f"live:    {r.get('url')}" + ('  (the version it replaces is kept)' if r.get('previous_kept') else ''))
+    if r.get('page'):
+        print(f"your page: {r['page']}")
 
 
 def cmd_list(a):
-    r = call('GET', '/api/models', None, None, a.site)
+    if a.hero:
+        r = call('GET', '/api/models', None, None, a.site)
+    else:
+        user = a.user or signed_in(a.site)[1]['username']
+        r = call('GET', f'/api/u/{user}', None, None, a.site)
     rows = r.get('items', [])
     if a.json:
         print(json.dumps(r, indent=2)); return
     print(f'{len(rows)} live model(s)' + (':' if rows else ''))
     for m in rows:
-        print(f"  {m['name']:<24} {m.get('workspace', '')}  SDEM {m.get('sdem', '?')}  {m.get('records', '?')} records  published {m.get('published', '?')}")
+        when = str(m.get('published_at') or m.get('published') or '?')[:10]
+        print(f"  {m['name']:<24} {m.get('workspace', '')}  SDEM {m.get('sdem', '?')}  {m.get('records', '?')} records  published {when}")
 
 
 def cmd_remove(a):
+    t = Target(a)
     name = name_of(a.target)
-    call('DELETE', f'/api/models/{name}', 'DESNRE_APPROVE_TOKEN', None, a.site)
-    print(f'{name} taken off the site')
+    call('DELETE', t.path(name), t.live_tok, None, a.site)
+    print(f'{name} taken off ' + ('the hero page' if t.hero else 'your page'))
 
 
 def main(argv=None):
@@ -522,7 +599,8 @@ def main(argv=None):
     ap = argparse.ArgumentParser(prog='sdem desnre', description=__doc__.split('\n\n')[0], formatter_class=argparse.RawDescriptionHelpFormatter,
                                  epilog=__doc__.split('\n\n')[1])
     ap.add_argument('--version', action='version', version=GENERATOR)
-    sub = ap.add_subparsers(dest='command', required=True, metavar='{create,publish,list,remove}')
+    sub = ap.add_subparsers(dest='command', required=True, metavar='{login,create,publish,list,remove,whoami,logout}')
+    p = sub.add_parser('login', help='sign in with a token from your account page (kept in your Keychain)'); p.add_argument('--site'); p.set_defaults(fn=cmd_login)
     p = sub.add_parser('create', help='check, build and send a workspace as a draft (not public)')
     p.add_argument('workspace')
     p.add_argument('--name', help="the model's name on the site (default: the workspace folder's name)")
@@ -533,10 +611,15 @@ def main(argv=None):
     p.add_argument('--no-open', action='store_true', help='do not open the preview in the browser')
     p.add_argument('--environment', default='production', help="the deployment environment A4 shows (default production; 'all' for every one)")
     p.add_argument('--scale', type=float, default=0.5, help='shape size; 0.5 fits about 70 records')
+    p.add_argument('--hero', action='store_true', help="the hero page, not your own (the site owner only)")
     p.add_argument('--site', help=f'the site (default $DESNRE_SITE or {SITE})'); p.set_defaults(fn=cmd_create)
-    for name, fn, h in (('publish', cmd_publish, 'a person makes the draft live'), ('remove', cmd_remove, 'take a model off the site')):
-        p = sub.add_parser(name, help=h); p.add_argument('target', help='the workspace folder, or the model name'); p.add_argument('--site'); p.set_defaults(fn=fn)
-    p = sub.add_parser('list', help='the live models'); p.add_argument('--json', action='store_true'); p.add_argument('--site'); p.set_defaults(fn=cmd_list)
+    for name, fn, h in (('publish', cmd_publish, 'make the draft live on your page'), ('remove', cmd_remove, 'take a model off your page')):
+        p = sub.add_parser(name, help=h); p.add_argument('target', help='the workspace folder, or the model name')
+        p.add_argument('--hero', action='store_true', help='the hero page (the site owner only)'); p.add_argument('--site'); p.set_defaults(fn=fn)
+    p = sub.add_parser('list', help='your live models'); p.add_argument('--user', help="someone else's page"); p.add_argument('--hero', action='store_true', help="the hero page's")
+    p.add_argument('--json', action='store_true'); p.add_argument('--site'); p.set_defaults(fn=cmd_list)
+    p = sub.add_parser('whoami', help='who you are signed in as'); p.add_argument('--site'); p.set_defaults(fn=cmd_whoami)
+    p = sub.add_parser('logout', help='remove the token from this computer'); p.add_argument('--site'); p.set_defaults(fn=cmd_logout)
     a = ap.parse_args(argv)
     try:
         a.fn(a)

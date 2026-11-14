@@ -48,7 +48,9 @@ class ExtensionTests(unittest.TestCase):
 
     def test_create_asks_once_whether_it_is_made_up(self):   # EXT-10, EXT-11: never assumed
         ws = self.copy()
-        code, _, err = run('create', str(ws), '--site', 'http://127.0.0.1:9')   # not a terminal, no --yes: refused, nothing written
+        with Site(people={'desnre_alice': ('alice', False)}) as site:
+            self.env(DESNRE_TOKEN='desnre_alice')
+            code, _, err = run('create', str(ws), '--site', site.url)   # signed in, but not a terminal and no --yes: refused, nothing written
         self.assertEqual(code, 1); self.assertIn('not yet confirmed as made-up data', err); self.assertFalse((ws / 'extensions').exists())
         m = X.confirm_made_up(ws, 'a tester', True)
         self.assertEqual((m['data'], m['marked_by']), ('synthetic', 'a tester'))
@@ -78,42 +80,60 @@ class ExtensionTests(unittest.TestCase):
         self.assertTrue(X.in_range('0.18.3', '>=0.18,<0.19')); self.assertFalse(X.in_range('0.19.0', '>=0.18,<0.19'))
         self.assertFalse(X.in_range('0.17.9', '>=0.18,<0.19'))
 
-    def test_no_token_no_send(self):   # EXT-12
+    def test_not_signed_in_nothing_is_sent(self):   # DA-40, EXT-12
         ws = self.copy()
-        env = os.environ.pop('DESNRE_PUBLISH_TOKEN', None)
-        real = X.token
-        X.token = lambda k: os.environ.get(k, '')   # not this Mac's Keychain
+        real, X.token = X.token, (lambda k: '')   # not this Mac's Keychain
         try:
             code, _, err = run('create', str(ws), '--yes', '--by', 'a tester', '--site', 'http://127.0.0.1:9')
         finally:
             X.token = real
-            if env: os.environ['DESNRE_PUBLISH_TOKEN'] = env
-        self.assertEqual(code, 1); self.assertIn('DESNRE_PUBLISH_TOKEN is not set', err)
+        self.assertEqual(code, 1); self.assertIn('you are not signed in', err); self.assertIn('/account, then: sdem desnre login', err)
+        self.assertFalse((ws / 'extensions').exists())                                              # refused before anything was built or recorded
 
-    def test_create_publish_list_remove_end_to_end(self):   # DP-05, DP-10…DP-14
-        tokens = {'DESNRE_PUBLISH_TOKEN': 'publish-' + 'x' * 24, 'DESNRE_APPROVE_TOKEN': 'approve-' + 'y' * 24}
-        saved = {k: os.environ.get(k) for k in tokens}
-        with Site(tokens['DESNRE_PUBLISH_TOKEN'], tokens['DESNRE_APPROVE_TOKEN']) as site:
-            try:
-                os.environ.update(tokens)
-                ws = self.copy(); url = site.url
-                code, text, err = run('create', str(ws), '--name', 'payment', '--yes', '--by', 'a tester', '--no-open', '--site', url)
-                self.assertEqual(code, 0, err); self.assertIn('a draft — not public', text); self.assertIn('?model=payment&draft=', text)
-                self.assertIn(f'sdem desnre publish {ws}', text)                                   # it says the next step
-                self.assertIn('0 live model(s)', run('list', '--site', url)[1])                    # a draft is not live
-                os.environ['DESNRE_APPROVE_TOKEN'] = tokens['DESNRE_PUBLISH_TOKEN']               # the publish token cannot approve
-                self.assertEqual(run('publish', str(ws), '--site', url)[0], 1)
-                os.environ['DESNRE_APPROVE_TOKEN'] = tokens['DESNRE_APPROVE_TOKEN']
-                code, text, err = run('publish', str(ws), '--site', url)                         # by the workspace: its recorded name
-                self.assertEqual(code, 0, err); self.assertIn('?model=payment', text)
-                code, text, _ = run('list', '--site', url, '--json')
-                self.assertEqual(json.loads(text)['items'][0]['workspace'], ws.name)
-                self.assertEqual(run('remove', 'payment', '--site', url)[0], 0)
-                self.assertIn('0 live model(s)', run('list', '--site', url)[1])
-            finally:
-                for k, v in saved.items():
-                    if v is None: os.environ.pop(k, None)
-                    else: os.environ[k] = v
+    def env(self, **tokens):   # tokens only from these values, never this Mac's Keychain
+        real = X.token
+        X.token = lambda k: tokens.get(k, '')
+        self.addCleanup(setattr, X, 'token', real)
+
+    def test_login_checks_the_token_and_keeps_it(self):   # DA-40
+        kept = []
+        real = X.keep_token; X.keep_token = lambda v: kept.append(v) or True; self.addCleanup(setattr, X, 'keep_token', real)
+        with Site(people={'desnre_alice': ('alice', False)}) as site:
+            sys.stdin = io.StringIO('desnre_alice\n'); self.addCleanup(setattr, sys, 'stdin', sys.__stdin__)
+            code, text, err = run('login', '--site', site.url)
+            self.assertEqual(code, 0, err); self.assertIn('signed in as @alice', text); self.assertEqual(kept, ['desnre_alice'])
+            sys.stdin = io.StringIO('desnre_nobody\n')
+            self.assertEqual(run('login', '--site', site.url)[0], 1)
+            sys.stdin = io.StringIO('not-a-token\n')
+            self.assertIn('not a DESNRE token', run('login', '--site', site.url)[2])
+
+    def test_create_publish_list_remove_on_your_own_page(self):   # DA-20, DA-21, DP-10…DP-13
+        with Site(people={'desnre_alice': ('alice', False)}) as site:
+            self.env(DESNRE_TOKEN='desnre_alice')
+            ws = self.copy(); url = site.url
+            self.assertIn('@alice', run('whoami', '--site', url)[1])
+            code, text, err = run('create', str(ws), '--name', 'payment', '--yes', '--by', 'a tester', '--no-open', '--site', url)
+            self.assertEqual(code, 0, err); self.assertIn('a draft — not public', text); self.assertIn('/u/alice/payment?draft=', text)
+            self.assertIn(f'sdem desnre publish {ws}', text)                                       # it says the next step
+            self.assertIn('0 live model(s)', run('list', '--site', url)[1])                        # a draft is not live
+            code, text, err = run('publish', str(ws), '--site', url)                              # by the workspace: its recorded name
+            self.assertEqual(code, 0, err); self.assertIn('/u/alice/payment', text); self.assertIn('your page:', text)
+            code, text, _ = run('list', '--site', url, '--json')
+            self.assertEqual(json.loads(text)['items'][0]['workspace'], ws.name)
+            self.assertEqual(run('list', '--hero', '--site', url, '--json')[1].count('"name"'), 0)   # nothing on the hero page
+            self.assertEqual(run('remove', 'payment', '--site', url)[0], 0)
+            self.assertIn('0 live model(s)', run('list', '--site', url)[1])
+
+    def test_the_hero_page_is_the_owners(self):   # DA-24
+        with Site(people={'desnre_alice': ('alice', False), 'desnre_owner': ('steven', True)}) as site:
+            ws = self.copy()
+            self.env(DESNRE_TOKEN='desnre_alice')
+            code, _, err = run('create', str(ws), '--hero', '--yes', '--by', 'a tester', '--no-open', '--site', site.url)
+            self.assertEqual(code, 1); self.assertIn("the hero page is the site owner's", err)
+            self.env(DESNRE_TOKEN='desnre_owner')
+            self.assertEqual(run('create', str(ws), '--hero', '--name', 'payment', '--no-open', '--site', site.url)[0], 0)
+            code, text, err = run('publish', 'payment', '--hero', '--site', site.url)
+            self.assertEqual(code, 0, err); self.assertIn('?model=payment', text)
 
 if __name__ == '__main__':
     unittest.main()

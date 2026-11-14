@@ -4,7 +4,7 @@ Extensions for [SDEM](https://github.com/taumoeps/bian-sdem-framework), each its
 
 | Extension | Does | Install |
 |---|---|---|
-| [**desnre**](desnre/) | puts a made-up SDEM workspace on the DESNRE site's 3D view — `sdem desnre create`, then `sdem desnre publish` | `pip install "git+https://github.com/taumoeps/sdem-extensions#subdirectory=desnre"` |
+| [**desnre**](desnre/) | puts a made-up SDEM workspace on your own page of the DESNRE site, as a 3D view — sign up at desnre.vercel.app/account, then `sdem desnre login`, `create`, `publish` | `pip install "git+https://github.com/taumoeps/sdem-extensions#subdirectory=desnre"` |
 
 Start a new one from [**template/**](template/).
 

@@ -377,8 +377,17 @@ def workspace_bundle(ws, v, mm):
     for L in LAYERS:
         r = run_sdem(ws, ['document', '--workspace', str(ws), '--layer', L])
         if r.returncode == 0: docs[L] = r.stdout
+    profile, profile_files = None, {}
+    if 'sdem-profile.json' in files:   # DW-32: the profile as SDEM merges it, and the files it builds on (its bases, standards, patterns)
+        profile = js(['profile', 'show', '--workspace', str(ws), '--json'])
+        for part in ((profile or {}).get('chain') or [])[:-1] + ((profile or {}).get('included') or []):
+            f = Path(part.get('file', ''))
+            if f.is_file():
+                rel = Path(os.path.relpath(f.resolve(), Path(ws).resolve())).as_posix()
+                if rel.count('../') <= 4:
+                    profile_files[rel] = json.loads(f.read_text(encoding='utf-8'))
     return {
-        'sdem': v, 'metamodel': mm, 'files': files,
+        'sdem': v, 'metamodel': mm, 'files': files, 'profile': profile, 'profile_files': profile_files,
         'check': js(['check', '--workspace', str(ws), '--json']),
         'documents': docs,
         'types': {L: (js(['types', L, '--workspace', str(ws), '--json']) or {}).get('types', []) for L in LAYERS},
@@ -592,6 +601,42 @@ def cmd_create(a):
     print(f"\nLook at every layer, then make it live:  sdem desnre publish {ws}" + (' --hero' if target.hero else ''))
 
 
+def pull_profile(ws, c, person, a, tok, me, name):
+    """DW-32: a change to the organisation's profile — written to sdem-profile.json, checked by SDEM (sdem profile check), and taken up
+    with sdem profile adopt, which records it as the person's decision. If SDEM refuses it, the file is put back as it was."""
+    f = Path(ws) / 'sdem-profile.json'
+    old = f.read_bytes() if f.exists() else None
+    def restore():
+        if old is None: f.unlink(missing_ok=True)
+        else: f.write_bytes(old)
+    f.write_text(json.dumps(c['profile'], indent=2, ensure_ascii=False) + '\n', encoding='utf-8')
+    r = run_sdem(ws, ['profile', 'check', '--workspace', str(ws), '--json'])
+    try: ck = json.loads(r.stdout)
+    except ValueError: ck = {'ok': False, 'issues': [(r.stderr or r.stdout).strip()[-400:]]}
+    if not ck.get('ok'):
+        restore()
+        raise PublishError(f"{c['id']} (profile: {c['reason']}) was refused by SDEM — nothing more pulled:\n  " + '\n  '.join(ck.get('issues', [])[:5]))
+    if not (Path(ws) / 'workspace.json').exists():   # a folder sdem new did not start (the bundled examples): nothing to record the adoption in
+        if a.dry_run:
+            restore(); print(f"would write {c['id']} (profile: {c['reason']}) — checked; not adopted: {ws} has no workspace.json"); return 1
+        call('POST', f"/api/u/{me['username']}/{name}/changes/{c['id']}", tok, json.dumps({'action': 'pulled', 'result': 'profile written and checked; not adopted (no workspace.json)'}), a.site)
+        print(f"applied {c['id']} (profile: {c['reason']}) — sdem-profile.json written and checked by SDEM; NOT adopted: {ws} has no workspace.json (sdem new starts one), so no decision is recorded")
+        return 1
+    args = ['profile', 'adopt', '--workspace', str(ws), '--person', person, '--reason', c['reason'], '--json'] + (['--dry-run'] if a.dry_run else [])
+    r = run_sdem(ws, args)
+    try: out = json.loads(r.stdout)
+    except ValueError: out = {}
+    if r.returncode != 0 or a.dry_run:
+        restore()
+        if r.returncode != 0:
+            raise PublishError(f"{c['id']} (profile: {c['reason']}) could not be adopted — nothing more pulled:\n  " + (r.stderr or r.stdout).strip()[-400:])
+        print(f"would apply {c['id']} (profile: {c['reason']}) with sdem profile adopt"); return 1
+    dec = out.get('decision', '?')
+    call('POST', f"/api/u/{me['username']}/{name}/changes/{c['id']}", tok, json.dumps({'action': 'pulled', 'result': f'profile adopted, decision {dec}'}), a.site)
+    print(f"applied {c['id']} (profile: {c['reason']}) — sdem-profile.json written, adopted, decision {dec}")
+    return 1
+
+
 def cmd_pull(a):
     """DW-24: the change sets accepted on the workbench, applied to the workspace with SDEM's own `sdem change propose` — so the
     workspace records each change and its impact as usual — then marked pulled on the site. Stops at the first one SDEM refuses."""
@@ -608,6 +653,8 @@ def cmd_pull(a):
     person = (a.by or who()).strip() or me['username']
     done = 0
     for c in todo:
+        if c.get('layer') == 'profile':
+            done += pull_profile(ws, c, person, a, tok, me, name); continue
         cs = {'layer': c['layer'], 'reason': c['reason'], 'changes': c.get('changes', []), 'relationships': c.get('relationships') or {}}
         with tempfile.NamedTemporaryFile('w', suffix='.json', delete=False, encoding='utf-8') as fh:
             json.dump(cs, fh); path = fh.name

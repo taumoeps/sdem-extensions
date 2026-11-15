@@ -1,7 +1,7 @@
 {
   "name": "desnre",
   "command": "sdem-desnre",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Publishes a made-up SDEM workspace to your own page of the DESNRE site, as a 3D view — a draft first, then live",
   "kind": [
     "publisher"
@@ -15,7 +15,10 @@
     "zones --layout --json",
     "document --layer A1…A4",
     "types A1…A4 --json",
-    "change propose --json"
+    "change propose --json",
+    "profile show --json",
+    "profile check --json",
+    "profile adopt --json"
   ],
   "reads": [
     "a1-business.json",
@@ -27,7 +30,7 @@
     "sdem-profile.json",
     "extensions/desnre.json"
   ],
-  "writes": "nothing in the workspace, except extensions/desnre.json when a person confirms a workspace is made-up data, and the change sets they accepted on the workbench (sdem desnre pull, through sdem change propose)",
+  "writes": "nothing in the workspace, except extensions/desnre.json when a person confirms a workspace is made-up data, and what they accepted on the workbench (sdem desnre pull): change sets, through sdem change propose, and the profile, through sdem profile check and sdem profile adopt",
   "sends_to": [
     "https://desnre.vercel.app/api/u/<you>/<name>",
     "https://desnre.vercel.app/api/me"

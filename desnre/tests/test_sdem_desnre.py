@@ -4,7 +4,7 @@ payment example and a stand-in for the site's API (fake_site.py: the same contra
 Needs SDEM: a checkout next to this repository (../bian-sdem-framework), or SDEM_HOME.
     python -m unittest discover -s desnre/tests
 """
-import contextlib, io, json, os, shutil, sys, tempfile, time, unittest
+import json, contextlib, io, json, os, shutil, sys, tempfile, time, unittest
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parents[1]          # desnre/
@@ -155,6 +155,37 @@ class ExtensionTests(unittest.TestCase):
             code, _, err = run('pull', str(ws), '--by', 'a tester', '--site', site.url)
             self.assertEqual(code, 1); self.assertIn('refused by SDEM', err); self.assertIn('NoSuchKind', err)
             self.assertEqual(site.changes[1]['status'], 'accepted')                                                               # not marked pulled
+
+
+    def test_pull_a_profile_change_checks_and_adopts_it(self):   # DW-32
+        ws = self.copy()
+        with Site(people={'desnre_alice': ('alice', False)}) as site:
+            self.env(DESNRE_TOKEN='desnre_alice')
+            d = 'alice/' + X.slug(ws)
+            good = {'format': 'sdem-profile/1', 'name': 'acme-payments', 'version': 1, 'description': 'made up',
+                    'types': [{'type': 'ACME.A3.PaymentsService', 'extends': 'A3.ApplicationComponent', 'name': 'Payments service', 'definition': 'a made-up kind', 'source': 'acme standard §1'}]}
+            bad = {'format': 'sdem-profile/1', 'name': 'acme', 'version': 1, 'types': [{'type': 'ACME.A3.X', 'extends': 'A3.NoSuchKind', 'name': 'x'}]}
+            (ws / 'workspace.json').write_text('{}')                                                                    # as sdem new starts one
+            site.changes += [{'id': 'cs-p1', '_design': d, 'status': 'accepted', 'accepted_at': '1', 'layer': 'profile', 'reason': 'our payments service kind', 'profile': good}]
+            code, text, err = run('pull', str(ws), '--dry-run', '--by', 'a tester', '--site', site.url)
+            self.assertEqual(code, 0, err); self.assertIn('would apply cs-p1', text); self.assertFalse((ws / 'sdem-profile.json').exists())
+            code, text, err = run('pull', str(ws), '--by', 'a tester', '--site', site.url)
+            self.assertEqual(code, 0, err); self.assertIn('adopted', text); self.assertEqual(site.changes[0]['status'], 'pulled')
+            self.assertIn('ACME.A3.PaymentsService', (ws / 'sdem-profile.json').read_text())
+            self.assertIn('profile', json.loads((ws / 'workspace.json').read_text()))                                   # recorded by sdem profile adopt
+            site.changes.append({'id': 'cs-p2', '_design': d, 'status': 'accepted', 'accepted_at': '2', 'layer': 'profile', 'reason': 'broken', 'profile': bad})
+            code, _, err = run('pull', str(ws), '--by', 'a tester', '--site', site.url)
+            self.assertEqual(code, 1); self.assertIn('refused by SDEM', err)
+            self.assertIn('ACME.A3.PaymentsService', (ws / 'sdem-profile.json').read_text())                            # put back as it was
+
+    def test_a_profile_in_a_folder_sdem_new_did_not_start_is_checked_not_adopted(self):
+        ws = self.copy()
+        with Site(people={'desnre_alice': ('alice', False)}) as site:
+            self.env(DESNRE_TOKEN='desnre_alice')
+            site.changes.append({'id': 'cs-p1', '_design': 'alice/' + X.slug(ws), 'status': 'accepted', 'accepted_at': '1', 'layer': 'profile', 'reason': 'ours',
+                                 'profile': {'format': 'sdem-profile/1', 'name': 'acme', 'version': 1, 'types': []}})
+            code, text, err = run('pull', str(ws), '--by', 'a tester', '--site', site.url)
+            self.assertEqual(code, 0, err); self.assertIn('NOT adopted', text); self.assertTrue((ws / 'sdem-profile.json').exists())
 
 
 if __name__ == '__main__':

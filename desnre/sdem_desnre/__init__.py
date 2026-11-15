@@ -3,7 +3,7 @@
     sdem desnre login                    once: paste a token from desnre.vercel.app/account (kept in your Keychain)
     sdem desnre create <workspace>       check it, build the 3D model, send it as a draft — not public; opens the preview
     sdem desnre publish <workspace>      make it live on your page: desnre.vercel.app/u/<you>/<name>
-    sdem desnre pull <workspace>         apply the change sets you accepted on the workbench to the workspace
+    sdem desnre pull <workspace>         bring the changes applied on the workbench into the workspace (stops on a conflict)
     sdem desnre list | whoami | remove <workspace> | logout
 
 The first SDEM extension (SDEM's docs/design/sdem-extensions-spec.md, EXT-01…EXT-15; the DESNRE site's
@@ -601,6 +601,57 @@ def cmd_create(a):
     print(f"\nLook at every layer, then make it live:  sdem desnre publish {ws}" + (' --hero' if target.hero else ''))
 
 
+_NONE = object()
+
+
+def differs(local, web):
+    """The fields where two versions of a record differ — attributes one by one — for a person to choose between."""
+    if local is None or web is None:
+        return ['the whole record (' + ('not in the workspace' if local is None else 'not on the site') + ')']
+    keys = sorted((set(local) | set(web)) - {'attributes'})
+    out = [f"{k}: workspace {json.dumps(local.get(k))} · web {json.dumps(web.get(k))}" for k in keys if local.get(k) != web.get(k)]
+    la, wa = local.get('attributes') or {}, web.get('attributes') or {}
+    out += [f"attributes.{k}: workspace {json.dumps(la.get(k))} · web {json.dumps(wa.get(k))}" for k in sorted(set(la) | set(wa)) if la.get(k) != wa.get(k)]
+    return out
+
+
+def merge(ws, c, mode):
+    """DW-53: a change set from the site, against the workspace as it is now. Each record it changes is compared with what it was on
+    the site when the change was made (`before`): the same in the workspace — a clean merge; already as the web has it — nothing to
+    do; changed in the workspace too — a conflict, for the person: --keep-local drops that record's change, --take-web applies it.
+    Returns (the change set to apply, or None when nothing is left; the conflicts, each (record, [differences]))."""
+    bf = c.get('before') or {}
+    if c['layer'] == 'profile':
+        f = Path(ws) / 'sdem-profile.json'
+        local = json.loads(f.read_text(encoding='utf-8')) if f.exists() else None
+        if local == c['profile']: return None, []
+        was = bf.get('profile', _NONE)
+        if was is not _NONE and local != was:
+            return (c if mode == 'take-web' else None), [('sdem-profile.json', ['the profile was changed in the workspace and on the web'])]
+        return c, []
+    data = json.loads((Path(ws) / FILES[LAYERS.index(c['layer'])]).read_text(encoding='utf-8'))
+    byid = {r['id']: r for r in data.get('instances', [])}
+    rels = data.get('relationships', [])
+    has = lambda x: any((y['source'], y['kind'], y['target']) == (x['source'], x['kind'], x['target']) for y in rels)
+    keep, conflicts = [], []
+    for ch in c.get('changes', []):
+        rid, web = ch['record']['id'], ch['record']
+        local, was = byid.get(rid), (bf.get('records') or {}).get(rid, _NONE)
+        if local == web: continue                                   # already in the workspace
+        if was is not _NONE and local != was:                       # changed on both sides
+            conflicts.append((rid, differs(local, web)))
+            if mode != 'take-web': continue
+        op = ch['op']
+        if local is None and op != 'add': op = 'add'                # the web's version wins: put it back
+        if local is not None and op == 'add': op = 'update'
+        keep.append({**ch, 'op': op})
+    r = c.get('relationships') or {}
+    add = [x for x in r.get('add', []) if not has(x)]
+    remove = [x for x in r.get('remove', []) if has(x)]
+    if not keep and not add and not remove: return None, conflicts
+    return {**c, 'changes': keep, 'relationships': {'add': add, 'remove': remove}}, conflicts
+
+
 def pull_profile(ws, c, person, a, tok, me, name):
     """DW-32: a change to the organisation's profile — written to sdem-profile.json, checked by SDEM (sdem profile check), and taken up
     with sdem profile adopt, which records it as the person's decision. If SDEM refuses it, the file is put back as it was."""
@@ -651,11 +702,23 @@ def cmd_pull(a):
     if not todo:
         print(f'nothing to pull — no accepted change sets for {name}'); return
     person = (a.by or who()).strip() or me['username']
+    mode = 'keep-local' if a.keep_local else 'take-web' if a.take_web else None
     done = 0
     for c in todo:
+        todo_cs, conflicts = merge(ws, c, mode)
+        if conflicts and not mode:
+            raise PublishError(f"{c['id']} ({c['layer']}: {c['reason']}) changes what was also changed in {ws} since — nothing more pulled. Choose, then pull again:\n"
+                               + '\n'.join(f'  {rid}:\n    ' + '\n    '.join(d) for rid, d in conflicts)
+                               + f'\n  sdem desnre pull {ws} --keep-local   keep the workspace\'s version of these, take the rest'
+                               + f'\n  sdem desnre pull {ws} --take-web     the web\'s version wins')
+        note = f" ({len(conflicts)} conflict(s): {'kept the workspace' if mode == 'keep-local' else 'the web won'})" if conflicts else ''
+        if todo_cs is None:   # nothing left to do: already in the workspace, or every change kept local
+            if a.dry_run: print(f"would mark {c['id']} pulled — already in the workspace{note}"); continue
+            call('POST', f"/api/u/{me['username']}/{name}/changes/{c['id']}", tok, json.dumps({'action': 'pulled', 'result': 'already in the workspace' + note}), a.site)
+            print(f"{c['id']} ({c['layer']}: {c['reason']}) — already in the workspace{note}; marked pulled"); done += 1; continue
         if c.get('layer') == 'profile':
-            done += pull_profile(ws, c, person, a, tok, me, name); continue
-        cs = {'layer': c['layer'], 'reason': c['reason'], 'changes': c.get('changes', []), 'relationships': c.get('relationships') or {}}
+            done += pull_profile(ws, todo_cs, person, a, tok, me, name); continue
+        cs = {'layer': c['layer'], 'reason': c['reason'], 'changes': todo_cs['changes'], 'relationships': todo_cs['relationships']}
         with tempfile.NamedTemporaryFile('w', suffix='.json', delete=False, encoding='utf-8') as fh:
             json.dump(cs, fh); path = fh.name
         try:
@@ -672,18 +735,19 @@ def cmd_pull(a):
         if a.dry_run:
             print(f"would apply {c['id']} ({c['layer']}: {c['reason']}) as {csid}, event {ev}")
         else:
-            call('POST', f"/api/u/{me['username']}/{name}/changes/{c['id']}", tok, json.dumps({'action': 'pulled', 'result': f'{csid}, event {ev}'}), a.site)
-            print(f"applied {c['id']} ({c['layer']}: {c['reason']}) — {csid}, event {ev}")
+            call('POST', f"/api/u/{me['username']}/{name}/changes/{c['id']}", tok, json.dumps({'action': 'pulled', 'result': f'{csid}, event {ev}{note}'}), a.site)
+            print(f"applied {c['id']} ({c['layer']}: {c['reason']}) — {csid}, event {ev}{note}")
         done += 1
     if a.dry_run:
         print('dry run: nothing changed'); return
-    print(f'\n{done} change set(s) pulled into {ws}. To update the site: sdem desnre create {ws}, then sdem desnre publish {ws}')
+    print(f'\n{done} change set(s) pulled into {ws} — the workspace now has what the site shows. Commit it to git.'
+          + ('' if not mode else f' Where you kept your own version, publish again to put it on the site: sdem desnre create {ws}, then sdem desnre publish {name}'))
 
 
 def cmd_publish(a):
     t = Target(a)
     name = name_of(a.target)
-    r = call('POST', t.path(name) + '/approve', t.live_tok, '{}', a.site)
+    r = call('POST', t.path(name) + '/approve', t.live_tok, json.dumps({'force': True} if getattr(a, 'force', False) else {}), a.site)
     print(f"live:    {r.get('url')}" + ('  (the version it replaces is kept)' if r.get('previous_kept') else ''))
     if r.get('page'):
         print(f"your page: {r['page']}")
@@ -735,12 +799,16 @@ def main(argv=None):
     for name, fn, h in (('publish', cmd_publish, 'make the draft live on your page'), ('remove', cmd_remove, 'take a model off your page')):
         p = sub.add_parser(name, help=h); p.add_argument('target', help='the workspace folder, or the model name')
         p.add_argument('--hero', action='store_true', help='the hero page (the site owner only)'); p.add_argument('--site'); p.set_defaults(fn=fn)
+        if name == 'publish': p.add_argument('--force', action='store_true', help='replace the site\'s design even though it has changes made on the workbench you have not pulled (they are lost)')
     p = sub.add_parser('list', help='your live models'); p.add_argument('--user', help="someone else's page"); p.add_argument('--hero', action='store_true', help="the hero page's")
     p.add_argument('--json', action='store_true'); p.add_argument('--site'); p.set_defaults(fn=cmd_list)
     p = sub.add_parser('pull', help='apply the change sets accepted on the workbench to the workspace (sdem change propose)')
     p.add_argument('workspace'); p.add_argument('--name', help="the model's name on the site (default: the workspace's)")
     p.add_argument('--by', help='the person recorded with each change (default: your git user name)')
     p.add_argument('--dry-run', action='store_true', help='check each change set with SDEM; change nothing'); p.add_argument('--site'); p.set_defaults(fn=cmd_pull)
+    g = p.add_mutually_exclusive_group()
+    g.add_argument('--keep-local', action='store_true', help='where a record was changed in the workspace and on the web: keep the workspace\'s')
+    g.add_argument('--take-web', action='store_true', help='where a record was changed in the workspace and on the web: the web\'s version wins')
     p = sub.add_parser('whoami', help='who you are signed in as'); p.add_argument('--site'); p.set_defaults(fn=cmd_whoami)
     p = sub.add_parser('logout', help='remove the token from this computer'); p.add_argument('--site'); p.set_defaults(fn=cmd_logout)
     a = ap.parse_args(argv)

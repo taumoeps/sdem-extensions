@@ -4,7 +4,7 @@ payment example and a stand-in for the site's API (fake_site.py: the same contra
 Needs SDEM: a checkout next to this repository (../bian-sdem-framework), or SDEM_HOME.
     python -m unittest discover -s desnre/tests
 """
-import json, contextlib, io, json, os, shutil, sys, tempfile, time, unittest
+import json, contextlib, io, os, shutil, sys, tempfile, time, unittest
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parents[1]          # desnre/
@@ -186,6 +186,49 @@ class ExtensionTests(unittest.TestCase):
                                  'profile': {'format': 'sdem-profile/1', 'name': 'acme', 'version': 1, 'types': []}})
             code, text, err = run('pull', str(ws), '--by', 'a tester', '--site', site.url)
             self.assertEqual(code, 0, err); self.assertIn('NOT adopted', text); self.assertTrue((ws / 'sdem-profile.json').exists())
+
+
+    def _site_change(self, ws, name):   # what the site recorded: the capability renamed on the web, and what it was before
+        recs = json.loads((ws / 'a1-business.json').read_text())['instances']
+        was = next(r for r in recs if r['id'] == 'CAP-PAY-000')
+        web = {**was, 'version': '1.1', 'name': name}
+        return {'id': 'cs-w1', '_design': 'alice/' + X.slug(ws), 'status': 'accepted', 'accepted_at': '1', 'layer': 'A1', 'reason': 'renamed on the web',
+                'changes': [{'op': 'update', 'record': web}], 'relationships': {}, 'before': {'records': {'CAP-PAY-000': was}, 'links': {}}}
+
+    def _local_rename(self, ws, name):   # the architect changes the same record in the workspace, with SDEM
+        recs = json.loads((ws / 'a1-business.json').read_text())['instances']
+        r = {**next(x for x in recs if x['id'] == 'CAP-PAY-000'), 'version': '1.2', 'name': name}
+        f = ws / 'local-cs.json'; f.write_text(json.dumps({'layer': 'A1', 'reason': 'renamed locally', 'changes': [{'op': 'update', 'record': r}]}))
+        out = X.run_sdem(ws, ['change', 'propose', str(f), '--workspace', str(ws), '--agent', 'architect', '--person', 'a tester', '--json']); f.unlink()
+        self.assertEqual(out.returncode, 0, out.stdout[-400:])
+
+    def test_pull_stops_on_a_record_changed_in_both_places(self):   # DW-53
+        ws = self.copy()
+        with Site(people={'desnre_alice': ('alice', False)}) as site:
+            self.env(DESNRE_TOKEN='desnre_alice')
+            site.changes.append(self._site_change(ws, 'Payments (web)'))
+            self._local_rename(ws, 'Payments (local)')
+            code, _, err = run('pull', str(ws), '--by', 'a tester', '--site', site.url)
+            self.assertEqual(code, 1); self.assertIn('CAP-PAY-000', err); self.assertIn('name: workspace "Payments (local)" · web "Payments (web)"', err)
+            self.assertIn('--keep-local', err); self.assertEqual(site.changes[0]['status'], 'accepted')                         # nothing done
+            code, text, err = run('pull', str(ws), '--keep-local', '--by', 'a tester', '--site', site.url)
+            self.assertEqual(code, 0, err); self.assertIn('kept the workspace', text); self.assertEqual(site.changes[0]['status'], 'pulled')
+            self.assertIn('Payments (local)', (ws / 'a1-business.json').read_text())
+
+    def test_pull_take_web_and_a_change_already_there(self):   # DW-53
+        ws = self.copy()
+        with Site(people={'desnre_alice': ('alice', False)}) as site:
+            self.env(DESNRE_TOKEN='desnre_alice')
+            site.changes.append(self._site_change(ws, 'Payments (web)'))
+            self._local_rename(ws, 'Payments (local)')
+            code, text, err = run('pull', str(ws), '--take-web', '--by', 'a tester', '--site', site.url)
+            self.assertEqual(code, 0, err); self.assertIn('the web won', text)
+            body = (ws / 'a1-business.json').read_text(); self.assertIn('Payments (web)', body); self.assertNotIn('Payments (local)', body)
+            again = {**self._site_change(ws, 'Payments (web)'), 'id': 'cs-w2', 'accepted_at': '2'}
+            again['changes'][0]['record'] = next(r for r in json.loads(body)['instances'] if r['id'] == 'CAP-PAY-000')            # what the workspace has now
+            site.changes.append(again)
+            code, text, err = run('pull', str(ws), '--by', 'a tester', '--site', site.url)
+            self.assertEqual(code, 0, err); self.assertIn('already in the workspace', text); self.assertEqual(site.changes[1]['status'], 'pulled')
 
 
 if __name__ == '__main__':

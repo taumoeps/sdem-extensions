@@ -26,7 +26,8 @@ The first `create` of a workspace asks you to confirm it is **made-up data** (th
 |---|---|
 | `sdem desnre create <ws> --dry-run` | check and build only; writes the model to a file, sends nothing |
 | `sdem desnre create <ws> --name payment` | a different name on your page (default: the workspace folder's name) |
-| `sdem desnre pull <ws>` | bring the change sets you accepted on the workbench into the workspace — SDEM applies each (`sdem change propose`) and records it; a change to the organisation's profile is written, checked (`sdem profile check`) and adopted (`sdem profile adopt`, the person's recorded decision) — or put back if SDEM refuses it; `--dry-run` checks them only. Then publish again |
+| `sdem desnre pull <ws>` | bring the changes you accepted on the workbench — already applied on the site — into the workspace: SDEM replays each (`sdem change propose`; a profile through `sdem profile check` and `sdem profile adopt`) and records it. A record you also changed in the workspace since stops the pull and shows both versions: `--keep-local` keeps yours, `--take-web` takes the web's. `--dry-run` checks only |
+| `sdem desnre publish <name> --force` | publishing is refused while the site has workbench changes you have not pulled; `--force` replaces them (they are lost) |
 | `sdem desnre list` | your live models (`--user <name>` someone else's) |
 | `sdem desnre remove <ws>` | take it off your page |
 | `sdem desnre whoami` · `logout` | who you are signed in as · remove the token from this computer |

@@ -21,7 +21,7 @@ GENERATOR = f"sdem-desnre {MANIFEST['version']}"
 SITE = os.environ.get('DESNRE_SITE', 'https://desnre.vercel.app')
 MARK = Path('extensions') / 'desnre.json'
 NAME = re.compile(SCHEMA['properties']['name']['pattern'])
-MAX_BYTES = 2_000_000   # DP-10
+MAX_BYTES = 4_000_000   # DP-10, DW-41: the 3D model and its workspace together
 
 
 class PublishError(Exception):
@@ -356,6 +356,35 @@ def build(ws, scale, topology=True, environment='production'):
 
 
 
+LAYERS = ('A1', 'A2', 'A3', 'A4')
+WS_FILES = FILES + ['mappings.json', 'requirements.json', 'sdem-profile.json']
+
+
+def workspace_bundle(ws, v, mm):
+    """DW-40: what the workbench shows — the workspace's own files, and what SDEM says about them: the check report, each layer's
+    document, the kinds of record each layer allows (with the profile's), and how each layer is drawn. All through SDEM's commands."""
+    def js(args):
+        r = run_sdem(ws, args)
+        try: return json.loads(r.stdout)
+        except ValueError: return None
+    files = {}
+    for f in WS_FILES:
+        p = Path(ws) / f
+        if p.exists():
+            files[f] = json.loads(p.read_text(encoding='utf-8'))
+    docs = {}
+    for L in LAYERS:
+        r = run_sdem(ws, ['document', '--workspace', str(ws), '--layer', L])
+        if r.returncode == 0: docs[L] = r.stdout
+    return {
+        'sdem': v, 'metamodel': mm, 'files': files,
+        'check': js(['check', '--workspace', str(ws), '--json']),
+        'documents': docs,
+        'types': {L: (js(['types', L, '--workspace', str(ws), '--json']) or {}).get('types', []) for L in LAYERS},
+        'layouts': {L: js(['layout', '--layer', L, '--workspace', str(ws), '--json']) for L in LAYERS},
+    }
+
+
 def model_for(ws, name, environment='production', scale=0.5, need_mark=True):
     """DP-01…DP-04: the gates, then the model with its header, validated. The same workspace always gives the same model (EXT-13)."""
     if not NAME.match(name or ''):
@@ -367,6 +396,7 @@ def model_for(ws, name, environment='production', scale=0.5, need_mark=True):
     errs = validate(model)
     if errs:
         raise PublishError('the model does not match its schema:\n  ' + '\n  '.join(errs[:10]))
+    model['workspace'] = workspace_bundle(ws, v, mm)   # DW-40: kept beside the 3D model by the site, for the workbench
     return model
 
 

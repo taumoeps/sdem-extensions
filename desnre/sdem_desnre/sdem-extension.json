@@ -1,7 +1,7 @@
 {
   "name": "desnre",
   "command": "sdem-desnre",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Publishes a made-up SDEM workspace to your own page of the DESNRE site, as a 3D view — a draft first, then live",
   "kind": [
     "publisher"
@@ -11,8 +11,10 @@
   "uses": [
     "--version",
     "check --json",
-    "layout --layer A1|A2|A3 --json",
-    "zones --layout --json"
+    "layout --layer A1|A2|A3|A4 --json",
+    "zones --layout --json",
+    "document --layer A1…A4",
+    "types A1…A4 --json"
   ],
   "reads": [
     "a1-business.json",
@@ -20,6 +22,8 @@
     "a3-application.json",
     "a4-technology.json",
     "mappings.json",
+    "requirements.json",
+    "sdem-profile.json",
     "extensions/desnre.json"
   ],
   "writes": "nothing in the workspace, except extensions/desnre.json when a person runs `sdem-desnre mark`",

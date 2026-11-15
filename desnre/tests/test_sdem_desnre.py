@@ -135,5 +135,27 @@ class ExtensionTests(unittest.TestCase):
             code, text, err = run('publish', 'payment', '--hero', '--site', site.url)
             self.assertEqual(code, 0, err); self.assertIn('?model=payment', text)
 
+    def test_pull_applies_accepted_change_sets_with_sdem(self):   # DW-24
+        ws = self.copy()
+        with Site(people={'desnre_alice': ('alice', False)}) as site:
+            self.env(DESNRE_TOKEN='desnre_alice')
+            d = 'alice/' + X.slug(ws)
+            good = {'id': 'cs-1', '_design': d, 'status': 'accepted', 'accepted_at': '1', 'layer': 'A1', 'reason': 'rename the payments capability',
+                    'changes': [{'op': 'update', 'record': {'id': 'CAP-PAY-000', 'type': 'A1.BusinessCapability', 'version': '1.1', 'name': 'Payments (renamed)', 'lifecycle_status': 'active'}}]}
+            bad = {'id': 'cs-2', '_design': d, 'status': 'accepted', 'accepted_at': '2', 'layer': 'A1', 'reason': 'a kind that does not exist',
+                   'changes': [{'op': 'add', 'record': {'id': 'X-1', 'type': 'A1.NoSuchKind', 'version': '1', 'name': 'x', 'lifecycle_status': 'active'}}]}
+            site.changes += [good, {**bad, 'status': 'proposed'}]
+            code, text, err = run('pull', str(ws), '--dry-run', '--by', 'a tester', '--site', site.url)
+            self.assertEqual(code, 0, err); self.assertIn('would apply cs-1', text); self.assertEqual(good['status'], 'accepted')   # a dry run changes nothing
+            self.assertNotIn('Payments (renamed)', (ws / 'a1-business.json').read_text())
+            code, text, err = run('pull', str(ws), '--by', 'a tester', '--site', site.url)
+            self.assertEqual(code, 0, err); self.assertIn('applied cs-1', text); self.assertEqual(good['status'], 'pulled')
+            self.assertIn('Payments (renamed)', (ws / 'a1-business.json').read_text())                                          # applied by SDEM itself
+            site.changes[1]['status'] = 'accepted'
+            code, _, err = run('pull', str(ws), '--by', 'a tester', '--site', site.url)
+            self.assertEqual(code, 1); self.assertIn('refused by SDEM', err); self.assertIn('NoSuchKind', err)
+            self.assertEqual(site.changes[1]['status'], 'accepted')                                                               # not marked pulled
+
+
 if __name__ == '__main__':
     unittest.main()

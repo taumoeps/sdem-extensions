@@ -3,6 +3,7 @@
     sdem desnre login                    once: paste a token from desnre.vercel.app/account (kept in your Keychain)
     sdem desnre create <workspace>       check it, build the 3D model, send it as a draft — not public; opens the preview
     sdem desnre publish <workspace>      make it live on your page: desnre.vercel.app/u/<you>/<name>
+    sdem desnre pull <workspace>         apply the change sets you accepted on the workbench to the workspace
     sdem desnre list | whoami | remove <workspace> | logout
 
 The first SDEM extension (SDEM's docs/design/sdem-extensions-spec.md, EXT-01…EXT-15; the DESNRE site's
@@ -591,6 +592,47 @@ def cmd_create(a):
     print(f"\nLook at every layer, then make it live:  sdem desnre publish {ws}" + (' --hero' if target.hero else ''))
 
 
+def cmd_pull(a):
+    """DW-24: the change sets accepted on the workbench, applied to the workspace with SDEM's own `sdem change propose` — so the
+    workspace records each change and its impact as usual — then marked pulled on the site. Stops at the first one SDEM refuses."""
+    import tempfile
+    ws = a.workspace
+    if not Path(ws, 'a1-business.json').exists():
+        raise PublishError(f'{ws} is not an SDEM workspace (no a1-business.json)')
+    tok, me = signed_in(a.site)
+    name = a.name or name_of(ws)
+    items = call('GET', f"/api/u/{me['username']}/{name}/changes", tok, None, a.site).get('items', [])
+    todo = sorted([c for c in items if c.get('status') == 'accepted'], key=lambda c: c.get('accepted_at', ''))
+    if not todo:
+        print(f'nothing to pull — no accepted change sets for {name}'); return
+    person = (a.by or who()).strip() or me['username']
+    done = 0
+    for c in todo:
+        cs = {'layer': c['layer'], 'reason': c['reason'], 'changes': c.get('changes', []), 'relationships': c.get('relationships') or {}}
+        with tempfile.NamedTemporaryFile('w', suffix='.json', delete=False, encoding='utf-8') as fh:
+            json.dump(cs, fh); path = fh.name
+        try:
+            args = ['change', 'propose', path, '--workspace', str(ws), '--agent', 'architect', '--person', person, '--json'] + (['--dry-run'] if a.dry_run else [])
+            r = run_sdem(ws, args)
+            try: out = json.loads(r.stdout)
+            except ValueError: out = {'error': {'message': (r.stderr or r.stdout).strip()[-400:]}}
+        finally:
+            os.unlink(path)
+        if out.get('error'):
+            e = out['error']
+            raise PublishError(f"{c['id']} ({c['layer']}: {c['reason']}) was refused by SDEM — nothing more pulled:\n  {e.get('message', '')}\n  " + '\n  '.join(e.get('details', [])[:5]))
+        csid = (out.get('change_set') or {}).get('id', '?'); ev = (out.get('event') or {}).get('id', '?')
+        if a.dry_run:
+            print(f"would apply {c['id']} ({c['layer']}: {c['reason']}) as {csid}, event {ev}")
+        else:
+            call('POST', f"/api/u/{me['username']}/{name}/changes/{c['id']}", tok, json.dumps({'action': 'pulled', 'result': f'{csid}, event {ev}'}), a.site)
+            print(f"applied {c['id']} ({c['layer']}: {c['reason']}) — {csid}, event {ev}")
+        done += 1
+    if a.dry_run:
+        print('dry run: nothing changed'); return
+    print(f'\n{done} change set(s) pulled into {ws}. To update the site: sdem desnre create {ws}, then sdem desnre publish {ws}')
+
+
 def cmd_publish(a):
     t = Target(a)
     name = name_of(a.target)
@@ -629,7 +671,7 @@ def main(argv=None):
     ap = argparse.ArgumentParser(prog='sdem desnre', description=__doc__.split('\n\n')[0], formatter_class=argparse.RawDescriptionHelpFormatter,
                                  epilog=__doc__.split('\n\n')[1])
     ap.add_argument('--version', action='version', version=GENERATOR)
-    sub = ap.add_subparsers(dest='command', required=True, metavar='{login,create,publish,list,remove,whoami,logout}')
+    sub = ap.add_subparsers(dest='command', required=True, metavar='{login,create,publish,pull,list,remove,whoami,logout}')
     p = sub.add_parser('login', help='sign in with a token from your account page (kept in your Keychain)'); p.add_argument('--site'); p.set_defaults(fn=cmd_login)
     p = sub.add_parser('create', help='check, build and send a workspace as a draft (not public)')
     p.add_argument('workspace')
@@ -648,6 +690,10 @@ def main(argv=None):
         p.add_argument('--hero', action='store_true', help='the hero page (the site owner only)'); p.add_argument('--site'); p.set_defaults(fn=fn)
     p = sub.add_parser('list', help='your live models'); p.add_argument('--user', help="someone else's page"); p.add_argument('--hero', action='store_true', help="the hero page's")
     p.add_argument('--json', action='store_true'); p.add_argument('--site'); p.set_defaults(fn=cmd_list)
+    p = sub.add_parser('pull', help='apply the change sets accepted on the workbench to the workspace (sdem change propose)')
+    p.add_argument('workspace'); p.add_argument('--name', help="the model's name on the site (default: the workspace's)")
+    p.add_argument('--by', help='the person recorded with each change (default: your git user name)')
+    p.add_argument('--dry-run', action='store_true', help='check each change set with SDEM; change nothing'); p.add_argument('--site'); p.set_defaults(fn=cmd_pull)
     p = sub.add_parser('whoami', help='who you are signed in as'); p.add_argument('--site'); p.set_defaults(fn=cmd_whoami)
     p = sub.add_parser('logout', help='remove the token from this computer'); p.add_argument('--site'); p.set_defaults(fn=cmd_logout)
     a = ap.parse_args(argv)

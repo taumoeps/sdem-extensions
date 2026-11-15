@@ -15,6 +15,7 @@ class Site:
     def __init__(self, publish_token='', approve_token='', people=None):
         self.tokens = {'publish': publish_token, 'approve': approve_token}
         self.people = dict(people or {})   # personal token -> (username, admin)
+        self.changes = []                  # change sets, as the site keeps them (with '_design': user/name)
         self.store = {}   # path -> text
         site = self
 
@@ -46,6 +47,12 @@ class Site:
 
             def do_GET(self):
                 path = urlparse(self.path).path
+                mc = re.match(r'^/api/u/([^/]+)/([^/]+)/changes$', path)
+                if mc:
+                    p = self.person()
+                    if not p or p[0] != mc.group(1): return self.answer(403, {'error': 'only the owner'})
+                    items = [c for c in site.changes if c['_design'] == mc.group(1) + '/' + mc.group(2)]
+                    return self.answer(200, {'count': len(items), 'items': items})
                 if path == '/api/me':
                     p = self.person()
                     if not p: return self.answer(401, {'error': 'not allowed — wrong or missing token'})
@@ -66,6 +73,13 @@ class Site:
                 return self.answer(200, t) if t else self.answer(404, {'error': 'not found'})
 
             def do_POST(self):
+                mc = re.match(r'^/api/u/([^/]+)/([^/]+)/changes/([^/]+)$', urlparse(self.path).path)
+                if mc:
+                    body = json.loads(self.rfile.read(int(self.headers.get('Content-Length') or 0)).decode() or '{}')
+                    c = next((c for c in site.changes if c['id'] == mc.group(3)), None)
+                    if not c: return self.answer(404, {'error': 'no such change set'})
+                    if body.get('action') != 'pulled' or c['status'] != 'accepted': return self.answer(409, {'error': 'not accepted'})
+                    c['status'] = 'pulled'; c['pulled_result'] = body.get('result'); return self.answer(200, c)
                 name, approve, _ = self.route()
                 if not name: return self.answer(400, {'error': 'bad name'})
                 body = self.rfile.read(int(self.headers.get('Content-Length') or 0)).decode()

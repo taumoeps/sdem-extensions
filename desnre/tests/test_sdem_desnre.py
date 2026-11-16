@@ -245,5 +245,15 @@ class ExtensionTests(unittest.TestCase):
         self.assertIn('BEV-PAY-EXECUTED', ids); self.assertIn('CHN-OBAPI', ids)
 
 
+
+@unittest.skipUnless((SDEM / 'examples' / 'payment-initiation-v2').exists(), 'needs SDEM 0.19 or later')
+class PathTests(unittest.TestCase):   # PL-01: a path is the line between the nodes it connects, not a shape (the owner, 2026-11-16)
+    def test_a_path_is_sent_as_a_labelled_line(self):
+        sys.path.insert(0, str(SDEM))
+        m = X.build(str(SDEM / 'examples' / 'payment-initiation-v2'), 0.5); N = m['nodes']
+        self.assertNotIn('PATH-PAY-CORE-HSM', [n[0] for n in N])
+        self.assertIn(('INF-CORE-LEDGER-HOST', 'DEV-PAY-HSM', 'path · Core ledger host to HSM · tls'), [(N[e[0]][0], N[e[1]][0], e[3]) for e in m['edges']])
+
+
 if __name__ == '__main__':
     unittest.main()

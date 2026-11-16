@@ -272,6 +272,9 @@ def build(ws, scale, topology=True, environment='production'):
                 idx[sh['id']] = len(nodes); rtype[sh['id']] = sh['type']
                 nodes.append([sh['id'], sh['name'], l, round(x, 3), round(z, 3), k, readable(sh['type'])] + ([sh['zone']] if sh['zone'] else []))
             inner += [(x['source'], x['target'], 2, x['kind'], 1 if x['shown_by'] == 'position' else 0) for x in lay['links'] if x['source'] not in skip and x['target'] not in skip]
+            # a path is the line between the two nodes it connects (ArchiMate; SDEM PL-01 — the owner, 2026-11-16), labelled with its name and protocol
+            inner += [(q['from'], q['to'], 2, f"path · {q['name']}" + (f" · {q['protocol']}" if q.get('protocol') else ''), 0) for q in lay.get('paths', [])]
+            dropped |= {q['id'] for q in lay.get('paths', [])}
             zone_links = [[c['from'], c['to']] for c in lay['connections']]   # arrows between the regions (ZC-01, ZC-02); nesting is one region inside another
             continue
         for zl, types, x0, z0, x1, z1 in ZONES[l]:

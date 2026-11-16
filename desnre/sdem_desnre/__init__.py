@@ -210,7 +210,9 @@ def sdem_containment(ws, layer):
 
 def sdem_layout(ws, environment):
     """A4 by its network zones (`sdem zones --layout --json`). Coordinates come as fractions of the plate."""
-    r = run_sdem(ws, ['zones', '--layout', '--environment', environment or 'all', '--workspace', str(ws), '--json'])
+    r = run_sdem(ws, ['zones', '--layout', '--headings', '--environment', environment or 'all', '--workspace', str(ws), '--json'])   # SDEM 0.19: networks in their zone's heading (ZL-03)
+    if r.returncode != 0 and '--headings' in (r.stderr or ''):   # SDEM 0.18 has no --headings: the old layout, networks handled here
+        r = run_sdem(ws, ['zones', '--layout', '--environment', environment or 'all', '--workspace', str(ws), '--json'])
     if r.returncode != 0:
         raise PublishError(f"sdem zones --layout failed: {(r.stderr or r.stdout).strip()[-400:]} — A4 needs network zones")
     return json.loads(r.stdout)
@@ -262,7 +264,7 @@ def build(ws, scale, topology=True, environment='production'):
                 rng = at4.get(sh['id'], {}).get('address_range')
                 if sh['zone'] and rng: ranges.setdefault(sh['zone'], []).extend(rng if isinstance(rng, list) else [rng])
             for z in zones[3]:
-                if len(z) > 5 and z[5] in ranges: z[0] = z[0] + ' · ' + ', '.join(ranges[z[5]])
+                if len(z) > 5 and z[5] in ranges and not lay.get('headings'): z[0] = z[0] + ' · ' + ', '.join(ranges[z[5]])   # SDEM 0.19 puts them there itself
             dropped |= skip
             for sh in lay['shapes']:
                 if sh['id'] in skip: continue

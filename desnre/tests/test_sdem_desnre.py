@@ -231,5 +231,19 @@ class ExtensionTests(unittest.TestCase):
             self.assertEqual(code, 0, err); self.assertIn('already in the workspace', text); self.assertEqual(site.changes[1]['status'], 'pulled')
 
 
+    def test_supports_sdem_018_and_019(self):   # desnre 0.7.0: SDEM 0.18 (metamodel 0.14) and 0.19 (metamodel 0.17)
+        for v in ('0.18.0', '0.19.0'): self.assertTrue(X.in_range(v, X.MANIFEST['sdem']), v)
+        for v in ('0.14.0', '0.17.0'): self.assertTrue(X.in_range(v, X.MANIFEST['metamodel']), v)
+        self.assertFalse(X.in_range('0.20.0', X.MANIFEST['sdem']))
+
+    def test_a_full_design_builds_without_its_fields_and_locations(self):   # SDEM 0.19: fields and locations are in the workspace, not drawn
+        v2 = SDEM / 'examples' / 'payment-initiation-v2'
+        if not v2.exists(): self.skipTest('needs SDEM 0.19 (examples/payment-initiation-v2)')
+        body = X.build(str(v2), 0.5)
+        ids = {n[0] for n in body['nodes']}
+        self.assertNotIn('LOC-XA', ids); self.assertFalse(any(i.startswith('F-PAY-INSTR-') for i in ids))
+        self.assertIn('BEV-PAY-EXECUTED', ids); self.assertIn('CHN-OBAPI', ids)
+
+
 if __name__ == '__main__':
     unittest.main()

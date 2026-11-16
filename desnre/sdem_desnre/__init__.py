@@ -161,6 +161,10 @@ SHAPE = {
     'A3.APIOperation': 'api', 'A3.DataEntity': 'tbl', 'A3.Event': 'evt',
     'A4.SystemSoftware': 'node', 'A4.TechnologyService': 'rbox', 'A4.DeploymentEnvironment': 'obj',
     'A4.Deployment': 'dep', 'A4.CommunicationNetwork': 'net', 'A4.Artifact': 'img',
+    # metamodel 0.15.0–0.17.0 (SDEM 0.19): the new kinds; a data entity's fields and a location are not drawn (SDEM's layouts leave them out)
+    'A1.BusinessEvent': 'evt', 'A1.Product': 'obj', 'A1.BusinessInterface': 'dep', 'A1.BusinessActor': 'role', 'A1.BusinessService': 'rbox',
+    'A1.BusinessRequirement': 'doc', 'A3.ApplicationFunction': 'proc', 'A3.SolutionBuildingBlock': 'obj',
+    'A4.Node': 'node', 'A4.Device': 'node', 'A4.Path': 'net', 'A4.TechnologyInterface': 'dep',
 }
 DATABASE = re.compile(r'postgres|mysql|oracle|sql server|database|\bdb\b', re.I)   # system software drawn as a database
 
@@ -305,8 +309,13 @@ def build(ws, scale, topology=True, environment='production'):
         cross.append((a, b, 1 if m['status'] == 'approved' else 0, m['relationship'], 0))
 
     edges = []
+    exists = set()
+    for f in FILES:
+        with open(os.path.join(ws, f), encoding='utf-8') as fh:
+            exists |= {i['id'] for i in json.load(fh).get('instances', [])}
     for a, b, ok, rel, imp in inner + cross:
         if a not in idx or b not in idx:
+            if a in exists and b in exists: continue   # SDEM 0.19: a field or a location is in the workspace but not drawn — its links are not either
             raise PublishError(f'link {a} → {b} ({rel}) names a record not in the workspace')
         edges.append([idx[a], idx[b], ok, rel] + ([imp] if imp else []))
 

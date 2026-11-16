@@ -222,7 +222,7 @@ def plate(fx, fz): return X0 + fx * (X1 - X0), Z0 + fz * (Z1 - Z0)
 
 def build(ws, scale, topology=True, environment='production'):
     nodes, idx, rtype, inner, implied = [], {}, {}, [], set()
-    dropped = set(); zone_links = []; zone_links_by_layer = {}; laid_out = set()
+    dropped = set(); zone_links = []; zone_links_by_layer = {}; laid_out = set(); fits = []
     zones = [[[z[0], z[2], z[3], z[4], z[5]] for z in ZONES[l]] for l in range(4)]
     for l, f in enumerate(FILES):
         with open(os.path.join(ws, f), encoding='utf-8') as fh:
@@ -240,6 +240,7 @@ def build(ws, scale, topology=True, environment='production'):
                 nodes.append([sh['id'], sh['name'], l, round(x, 3), round(z, 3), k, readable(sh['type'])] + ([sh['zone']] if sh['zone'] else []))
             inner += [(x['source'], x['target'], 2, x['kind'], 2 if x['shown_by'] == 'position' else 0) for x in cl['links']]   # 2: a faint "part of" line — nesting shown as a line too (the owner, 2026-11-15)
             zone_links_by_layer[l] = [[c['from'], c['to']] for c in cl['connections']]
+            fits.append(cl.get('fit', 1) or 1)   # SDEM sized the layer for full-size shapes; when it could not fit them, the shapes are drawn smaller
             laid_out.add(l)
             continue
         if l == 3 and topology:   # A4 laid out by SDEM's deployment-zones viewpoint (one environment; default production)
@@ -357,7 +358,7 @@ def build(ws, scale, topology=True, environment='production'):
         'counts': {'records': len(nodes), 'inner': len(inner), 'mappings': len(cross)},
         'environment': environment,
         'zone_links': zone_links + [x for ls in zone_links_by_layer.values() for x in ls],
-        'scale': scale,
+        'scale': round(scale * min(fits + [1]), 3),
         'zones': zones,
         'nodes': nodes,
         'edges': edges,

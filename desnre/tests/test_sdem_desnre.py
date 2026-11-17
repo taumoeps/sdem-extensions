@@ -255,5 +255,27 @@ class PathTests(unittest.TestCase):   # PL-01: a path is the line between the no
         self.assertIn(('INF-CORE-LEDGER-HOST', 'DEV-PAY-HSM', 'path · Core ledger host to HSM · tls'), [(N[e[0]][0], N[e[1]][0], e[3]) for e in m['edges']])
 
 
+@unittest.skipUnless((SDEM / 'examples' / 'payment-initiation-v2').exists(), 'needs SDEM 0.19 or later')
+class DraftTests(unittest.TestCase):   # desnre 0.7.4: the draft is drawn — links SDEM proposed and nobody has decided, dashed (the owner, 2026-11-17)
+    def test_a_link_proposed_and_not_yet_decided_is_drawn_dashed(self):
+        import shutil, tempfile
+        tmp = Path(tempfile.mkdtemp()); self.addCleanup(shutil.rmtree, tmp, True)
+        ws = tmp / 'ws'; shutil.copytree(SDEM / 'examples' / 'payment-initiation-v2', ws, ignore=shutil.ignore_patterns('graph'))
+        reg = json.loads((ws / 'mappings.json').read_text(encoding='utf-8'))['mappings']
+        done = next(m for m in reg if m['status'] == 'approved')
+        before = X.build(str(ws), 0.5); N = [n[0] for n in before['nodes']]
+        linked = {(N[e[0]], N[e[1]]) for e in before['edges']} | {(N[e[1]], N[e[0]]) for e in before['edges']}
+        a, b = next((x, y) for x in N for y in N if x != y and (x, y) not in linked and x[:3] != y[:3])
+        (ws / 'links').mkdir(exist_ok=True)
+        (ws / 'links' / 'proposals.json').write_text(json.dumps({'mappings': [
+            {'mapping_id': 'P-1', 'source': {'id': a}, 'relationship': 'SERVED_BY', 'target': {'id': b}, 'status': 'proposed'},
+            {**done, 'mapping_id': 'P-2', 'status': 'proposed'}]}), encoding='utf-8')   # one new, one a person has already approved
+        m = X.build(str(ws), 0.5); N = [n[0] for n in m['nodes']]
+        drawn = [(N[e[0]], N[e[1]], e[2], e[3]) for e in m['edges']]
+        self.assertTrue([d for d in drawn if {d[0], d[1]} == {a, b} and d[2] == 0 and d[3] == 'SERVED_BY'])   # 0: proposed — the site draws it dashed
+        self.assertEqual(len(m['edges']), len(before['edges']) + 1)                                        # the approved one is not drawn a second time
+        self.assertEqual(m['counts']['proposed'], 1)
+
+
 if __name__ == '__main__':
     unittest.main()

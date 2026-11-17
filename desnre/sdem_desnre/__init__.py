@@ -304,6 +304,16 @@ def build(ws, scale, topology=True, environment='production'):
 
     with open(os.path.join(ws, 'mappings.json'), encoding='utf-8') as fh:
         maps = json.load(fh).get('mappings', [])
+    # desnre 0.7.4: the draft is drawn. What SDEM proposed between layers (sdem link, sdem aid) and nobody has decided is sent as a
+    # proposed link — the site draws it dashed. Whatever the registry already holds for the same link (approved, rejected …) stands.
+    held = {(m['source']['id'], m['relationship'], m['target']['id']) for m in maps}
+    import glob
+    for pf in sorted(glob.glob(os.path.join(ws, 'aid', '*-proposals.json'))) + [os.path.join(ws, 'links', 'proposals.json')]:
+        if not os.path.exists(pf): continue
+        with open(pf, encoding='utf-8') as fh:
+            for m in json.load(fh).get('mappings', []):
+                k = (m['source']['id'], m['relationship'], m['target']['id'])
+                if k not in held: held.add(k); maps.append({**m, 'status': 'proposed'})
     cross = []
     for m in maps:
         if m.get('status') not in SHOWN:
@@ -360,7 +370,7 @@ def build(ws, scale, topology=True, environment='production'):
 
     return {
         'source': {'workspace': os.path.basename(os.path.normpath(ws)), 'generator': GENERATOR},
-        'counts': {'records': len(nodes), 'inner': len(inner), 'mappings': len(cross)},
+        'counts': {'records': len(nodes), 'inner': len(inner), 'mappings': len(cross), 'proposed': sum(1 for c in cross if c[2] == 0)},
         'environment': environment,
         'zone_links': zone_links + [x for ls in zone_links_by_layer.values() for x in ls],
         'scale': round(scale * min(fits + [1]), 3),
@@ -602,7 +612,7 @@ def cmd_create(a):
         raise PublishError(f'the model is {len(text.encode("utf-8"))} bytes; the site takes at most {MAX_BYTES}')
     c = model['counts']
     print(f"checked: SDEM {model['source']['sdem']}, metamodel {model['source']['metamodel']}, sdem check clean")
-    print(f"built:   {name} — {c['records']} records · {c['inner']} links inside layers · {c['mappings']} mappings")
+    print(f"built:   {name} — {c['records']} records · {c['inner']} links inside layers · {c['mappings']} mappings" + (f" ({c['proposed']} proposed, drawn dashed)" if c.get('proposed') else ''))
     if a.dry_run or a.out:
         out = Path(a.out or f'desnre-model-{name}.json'); out.write_text(text, encoding='utf-8')
         print(f'written: {out}')

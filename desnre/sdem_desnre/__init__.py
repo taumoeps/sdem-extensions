@@ -415,9 +415,18 @@ def workspace_bundle(ws, v, mm):
         'sdem': v, 'metamodel': mm, 'files': files, 'profile': profile, 'profile_files': profile_files,
         'check': js(['check', '--workspace', str(ws), '--json']),
         'documents': docs,
+        'status': health(js(['status', '--workspace', str(ws), '--json'])),
         'types': {L: (js(['types', L, '--workspace', str(ws), '--json']) or {}).get('types', []) for L in LAYERS},
         'layouts': {L: js(['layout', '--layer', L, '--workspace', str(ws), '--json']) for L in LAYERS},
     }
+
+
+def health(st):
+    """What `sdem status` says of the design, for the workbench's Health tab: its state, how complete it is by SDEM's completeness
+    standard, and its patterns. Never the workspace's folder, the next commands or the sources — those are the publisher's computer."""
+    if not isinstance(st, dict): return None
+    keep = ('state', 'layers', 'missing_layers', 'connections', 'counts', 'completeness', 'patterns')
+    return {k: st[k] for k in keep if k in st}
 
 
 def model_for(ws, name, environment='production', scale=0.5, need_mark=True):

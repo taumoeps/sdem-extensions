@@ -66,6 +66,10 @@ class ExtensionTests(unittest.TestCase):
         self.assertEqual(m['name'], ws.name)                                                       # the name: the workspace folder's
         self.assertEqual(m['source']['metamodel'], json.loads((ws / 'a1-business.json').read_text())['metamodel_version'])
         self.assertEqual(X.validate(m), [])
+        st = m['workspace']['status']                                                              # SDEM's own health figures, for the Health tab
+        self.assertEqual(st['state'], 'clear'); self.assertIn('completeness', st)                  # null when the design includes no completeness standard
+        self.assertFalse({'workspace', 'next', 'sources', 'name'} & set(st))                       # nothing about the publisher's computer
+        self.assertNotIn(str(self.tmp), json.dumps(m))
         again = self.tmp / 'm2.json'; run('create', str(ws), '--dry-run', '-o', str(again))
         self.assertEqual(out.read_bytes(), again.read_bytes())                                     # the same workspace, the same file
 

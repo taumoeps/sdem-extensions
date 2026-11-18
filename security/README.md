@@ -6,7 +6,20 @@ A3 (application) and A4 — without changing A1–A4. Install it, switch it on i
 
 Built on public sources only: **NIST SP 800-53 Rev. 5** controls (the catalogue ids, titles and families ship in
 `sdem_security/catalogue.json`, from NIST's OSCAL file — public domain), **NIST CSF 2.0** functions and categories (ids only),
-**STRIDE** threat categories and **NIST SP 800-207** (Zero Trust) for trust boundaries. Spec: [`docs/security-aspect-spec.md`](docs/security-aspect-spec.md). Audit for review: [`docs/audit-2026-11-19.md`](docs/audit-2026-11-19.md) — 23 findings, not yet fixed.
+**STRIDE** threat categories and **NIST SP 800-207** (Zero Trust) for trust boundaries. Spec: [`docs/security-aspect-spec.md`](docs/security-aspect-spec.md). Audit for review: [`docs/audit-2026-11-19.md`](docs/audit-2026-11-19.md) — 23 findings; the P0 ones are fixed in 0.1.3 (see its status column).
+
+## What you get, and from where
+
+Security in SDEM is four parts. This package is the first; the others are installed or released separately.
+
+| Part | What it adds | How you get it |
+|---|---|---|
+| **sdem-security** (this package, 0.1.3) | layer S and its record and link types; the security standard (SEC-S01a…S06b) and its own checks (SEC-S07, SEC-S08, SEC-LAYER); the NIST SP 800-53 catalogue; the commands `catalogue`, `coverage`, `threats`, `review`, `document`, `remove`, `propose` | below |
+| **SDEM** 0.19.0 | metamodel extensions: a layer across the stack (LR-11), `ext:` packs, switching one off (`sdem profile exclude`, MX-16), exceptions to an extension's own checks (MX-17), the security layer's document (`sdem document --layer S`) | `pip install "git+https://github.com/taumoeps/bian-sdem-framework@v0.19.0"` |
+| **sdem-desnre** 0.7.10 (the DESNRE publisher) | publishes the design with its security layer and this extension's results — review, coverage, STRIDE checklist and the review document — with no local folder paths | `pip install "git+https://github.com/taumoeps/sdem-extensions#subdirectory=desnre"` |
+| **The DESNRE site and its AI agent** | the 3D *Security* view (S1–S5; controls and threats in red); the Security tab (tiles per S-layer, records, figures, Document Output with the layer document and the review); security in Health, Metamodel, Connections and Document Output; the agent's `security_review` tool, and a 9.7 *Security architecture* section (with threats in 5 and SDEM's findings in 10) in the design document it writes | live at desnre.vercel.app — nothing to install; it shows security for a design published with sdem-security and desnre 0.7.10 installed |
+
+The site shows the extension's results as they were when the design was last published: publish again after the security design changes.
 
 ## Install and switch on
 
@@ -26,16 +39,26 @@ sdem security coverage --workspace <ws>                  # per record: its contr
 sdem security threats  --workspace <ws>                  # a STRIDE checklist per record — prompts for a person, never records
 sdem security review   --workspace <ws>                  # what the security design still lacks, weakest first
 sdem security document --workspace <ws> [-o review.md]   # the review as a document: findings, coverage per S1–S5, threats, the STRIDE checklist
+sdem security remove   --workspace <ws> --person <you> --reason "…"   # switch it off again — archived, not lost (below)
 sdem trace SEC-SC28 --graph <graph>                      # trace and impact follow the security links like any other
 ```
 
 Record types `SEC.S.SecurityControl`, `SEC.S.Threat`, `SEC.S.TrustBoundary`; links into A1–A4 `PROTECTS`, `ENFORCED_BY`,
 `THREATENS`, `BOUNDS` (approved by a person, with evidence), and `mitigates` (control → threat). The security standard's eight
-rules run in `sdem comply` as warnings — switching security on never stops a design's work.
+rules (SEC-S01a…SEC-S06b) run in `sdem comply` as warnings, and `review` adds three checks of its own (SEC-S07, SEC-S08,
+SEC-LAYER) — a person can grant an exception to any of them (`sdem exception grant --rule SEC-S08 …`). Switching security on never
+stops a design's work.
 
 A worked, made-up example for SDEM's `payment-initiation-v3`: [`examples/payment-initiation-v3/`](examples/payment-initiation-v3/).
 
 ## Remove
 
-Take `ext:security` out of the workspace's `sdem-profile.json` (and its `security.json`), or `pip uninstall sdem-security` —
-a workspace that still includes it is then refused with a message naming it, never checked as if its security records were not there.
+```
+sdem security remove --workspace <ws> --person <you> --reason "…" --dry-run      # then without --dry-run
+```
+
+A person's decision, recorded. SDEM takes `ext:security` out of the profile and keeps the security layer and every connection that
+touches it, whole, in `archive/ext-security-<date>.json`; their link ids are never given again. The design passes its checks
+afterwards. (Needs SDEM 0.19.0 as tagged on 2026-11-19 or later — `sdem profile exclude`, MX-16.) Do not delete `security.json` by hand: its connections would
+be left behind. Uninstalling the package while a workspace still includes it makes SDEM refuse that workspace with a message naming
+it — never check it as if its security records were not there.

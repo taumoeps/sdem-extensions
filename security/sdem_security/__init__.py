@@ -4,13 +4,15 @@
     sdem security coverage --workspace DIR                  per A1–A4 record: its controls, what enforces them, its threats
     sdem security threats  --workspace DIR                  a STRIDE checklist per record — prompts for a person, never records
     sdem security review   --workspace DIR                  what the security design still lacks, weakest first
+    sdem security document --workspace DIR [-o FILE]        the review as a readable document (Markdown)
+    sdem security remove  --workspace DIR --person P --reason R   switch security off again — archived, not lost (a person's decision)
     sdem security propose FILE --workspace DIR --person P   controls, threats and boundaries as a change set (a person accepts)
 
 Switch it on in a workspace first — a person's decision: sdem profile include ext:security --workspace DIR --person P, then
 sdem profile adopt --workspace DIR --person P (adds security.json). It uses SDEM only through its commands and the workspace's
 documented files (EXT-02), writes nothing itself (EXT-07), and checks SDEM's version against its manifest (EXT-04).
 """
-import argparse, json, re, shutil, subprocess, sys
+import argparse, datetime, json, re, shutil, subprocess, sys
 from pathlib import Path
 
 HERE = Path(__file__).parent
@@ -20,9 +22,16 @@ SEC_FILE = 'security.json'
 S_NAMES = {'S1': 'Business security', 'S2': 'Service domain security', 'S3': 'Data security', 'S4': 'Application security', 'S5': 'Technology security'}
 LINKS = ('PROTECTS', 'ENFORCED_BY', 'THREATENS', 'BOUNDS')
 # STRIDE per element (the classic table): which threat categories a person should consider for each kind of record
-STRIDE = {'A1.BusinessRole': 'SR', 'A1.BusinessActor': 'SR', 'A1.BusinessProcess': 'TRE', 'A1.BusinessObject': 'TID', 'A2.ServiceDomain': 'STRIDE', 'A2.ControlRecord': 'TRID',
-          'A3.DataEntity': 'TRID', 'A3.ApplicationComponent': 'STRIDE', 'A3.ApplicationInterface': 'STRIDE', 'A3.APIOperation': 'STIDE', 'A4.Path': 'TID',
-          'A4.Node': 'TDE', 'A4.NetworkZone': 'D', 'A4.SystemSoftware': 'TIDE', 'A4.Deployment': 'TE'}
+# (spec §7: an actor S·R; a process or component all six; data T·R·I·D; a flow or path T·I·D). Every type the pack lets a threat
+# THREATEN has an entry — a test holds the two together (AUD-04, AUD-07).
+STRIDE = {'A1.BusinessRole': 'SR', 'A1.BusinessActor': 'SR', 'A1.BusinessProcess': 'STRIDE', 'A1.BusinessObject': 'TRID', 'A2.ServiceDomain': 'STRIDE',
+          'A2.ControlRecord': 'TRID', 'A2.BusinessObject': 'TRID', 'A3.DataEntity': 'TRID', 'A3.DataAttribute': 'TRID', 'A3.ApplicationComponent': 'STRIDE',
+          'A3.ApplicationInterface': 'STRIDE', 'A3.APIOperation': 'STRIDE', 'A4.Path': 'TID', 'A4.CommunicationNetwork': 'TID', 'A4.Node': 'STDE',
+          'A4.InfrastructureComponent': 'STDE', 'A4.NetworkZone': 'D', 'A4.SystemSoftware': 'TIDE', 'A4.Deployment': 'TE'}
+PACK = json.loads((HERE / 'pack.json').read_text(encoding='utf-8'))
+PROTECTABLE = sorted({l['target_type'] for l in PACK['link_types'] if l['relationship'] == 'PROTECTS'})    # coverage's scope: what a control can protect
+THREATENABLE = sorted({l['target_type'] for l in PACK['link_types'] if l['relationship'] == 'THREATENS'})  # the checklist's scope: what a threat can threaten
+INACTIVE = {'retired', 'deprecated'}
 STRIDE_WORDS = {'S': 'Spoofing', 'T': 'Tampering', 'R': 'Repudiation', 'I': 'Information disclosure', 'D': 'Denial of service', 'E': 'Elevation of privilege'}
 SECURITY_LAYER_OF = {'A1': 'S1', 'A2': 'S2', 'A4': 'S5'}   # A3: data entities and their fields S3, the rest S4
 
@@ -30,7 +39,7 @@ SECURITY_LAYER_OF = {'A1': 'S1', 'A2': 'S2', 'A4': 'S5'}   # A3: data entities a
 def sdem(*args):
     """SDEM's command line — the one beside this Python (installed in SDEM's environment), else the one on the PATH."""
     exe = shutil.which('sdem', path=str(Path(sys.executable).parent)) or shutil.which('sdem') or 'sdem'
-    return subprocess.run([exe, *map(str, args)], capture_output=True, text=True)
+    return subprocess.run([exe, *map(str, args)], capture_output=True, text=True, encoding='utf-8', errors='replace')   # SDEM writes UTF-8 (AUD-10)
 
 
 def supported(version, spec):
@@ -69,6 +78,23 @@ def workspace(ws):
     return recs, layer_of, rels, maps
 
 
+def active_control(recs, cid):
+    """AUD-03: a control counts only while it can act — not retired or deprecated, and not marked not_applicable."""
+    c = recs.get(cid) or {}
+    return bool(c) and c.get('lifecycle_status') not in INACTIVE and (c.get('attributes') or {}).get('implementation_status') != 'not_applicable'
+
+
+def exceptions(ws, today=None):
+    """A person's exceptions in force today (sdem exception grant, PR-18): {(rule, record): exception id}."""
+    today = today or datetime.date.today(); out = {}
+    for e in ((_j(Path(ws) / 'exceptions.json') or {}).get('exceptions') or []):
+        try:
+            if datetime.date.fromisoformat(e['expires']) < today: continue
+        except (KeyError, ValueError): continue
+        for rec in e.get('records') or []: out[(e.get('rule'), rec)] = e.get('id')
+    return out
+
+
 def security_layer(r, layer):
     if layer == 'A3': return 'S3' if r['type'] in ('A3.DataEntity', 'A3.DataAttribute') else 'S4'
     return SECURITY_LAYER_OF.get(layer)
@@ -91,15 +117,23 @@ def coverage_rows(ws):
     rows = []
     for rid, r in sorted(recs.items(), key=lambda kv: (layer_of[kv[0]], kv[0])):
         L = layer_of[rid]
-        if L == 'S' or r['type'] not in STRIDE: continue
-        controls = [m['source']['id'] for m in by('PROTECTS', 0) if m['target']['id'] == rid]
+        if L == 'S' or r['type'] not in PROTECTABLE: continue
+        named = [m['source']['id'] for m in by('PROTECTS', 0) if m['target']['id'] == rid]
+        controls = [c for c in named if active_control(recs, c)]
         threats = [m['source']['id'] for m in by('THREATENS', 0) if m['target']['id'] == rid]
         enforced = {c: [m['target']['id'] for m in by('ENFORCED_BY', 0) if m['source']['id'] == c] for c in controls}
         at = r.get('attributes') or {}
         rows.append({'id': rid, 'name': r.get('name'), 'type': r['type'], 'layer': L, 'security_layer': security_layer(r, L),
                      'classification': at.get('access_classification') or r.get('access_classification'), 'personal_information': at.get('personal_information'),
                      'controls': [{'id': c, 'control_id': ((recs.get(c) or {}).get('attributes') or {}).get('control_id'), 'enforced_by': enforced[c]} for c in controls],
-                     'threats': threats, 'protected': bool(controls)})
+                     'threats': threats, 'protected': bool(controls), 'inactive_controls': [c for c in named if c not in controls]})
+    by_id = {x['id']: x for x in rows}   # a field is protected by what protects its data entity (the same store, the same controls)
+    for x in rows:
+        if x['type'] == 'A3.DataAttribute' and not x['protected']:
+            ents = sorted({l['source'] for l in rels if l.get('target') == x['id'] and (by_id.get(l['source']) or {}).get('type') == 'A3.DataEntity'}
+                          | {l['target'] for l in rels if l.get('source') == x['id'] and (by_id.get(l['target']) or {}).get('type') == 'A3.DataEntity'})
+            via = [e for e in ents if by_id[e]['protected']]
+            if via: x['protected'] = True; x['protected_through'] = via
     return rows
 
 
@@ -125,7 +159,7 @@ def threats_data(ws):
             stated.setdefault(m['target']['id'], set()).update(((t.get('attributes') or {}).get('stride') or []))
     out = []
     for rid, r in sorted(recs.items(), key=lambda kv: (layer_of[kv[0]], kv[0])):
-        cats = STRIDE.get(r['type'])
+        cats = STRIDE.get(r['type']) if r['type'] in THREATENABLE else None
         if not cats or layer_of[rid] == 'S': continue
         open_ = [c for c in cats if c not in stated.get(rid, set())]
         out.append({'id': rid, 'name': r.get('name'), 'type': r['type'], 'security_layer': security_layer(r, layer_of[rid]), 'consider': list(cats), 'stated': sorted(stated.get(rid, set())), 'not_yet_considered': open_})
@@ -141,26 +175,52 @@ def cmd_threats(a):
     return 0
 
 
-def computed_findings(ws):
-    """SEC-S07 and SEC-S08 (security-aspect-spec §6): checks along paths SDEM's rule language cannot express — the requirements
-    registry, and a component's access to personal data. Reported with the standard's own findings, in the same shape."""
+def computed_findings(ws, today=None):
+    """SEC-S07, SEC-S08 and SEC-LAYER — checks along paths SDEM's rule language cannot express (the requirements registry; a component's
+    or an operation's access to personal data). Reported in the standard's shape. As the standard's own rules (PR-11a): a check that is
+    not yet decidable — its subject still planned, its requirement only proposed — is `unresolved`, not `non_compliant` (AUD-02); a
+    person's exception (sdem exception grant --rule SEC-S08 …) holds it as `exception_approved` (MX-17); only controls that can act count
+    (AUD-03)."""
     recs, layer_of, rels, maps = workspace(ws)
     out, attrs = [], lambda i: (recs.get(i) or {}).get('attributes') or {}
+    planned = lambda i: (recs.get(i) or {}).get('lifecycle_status') == 'planned'
+    def add(rule, rec, decided, msg):
+        out.append({'rule': rule, 'record': rec, 'outcome': 'non_compliant' if decided else 'unresolved', 'message': msg, 'computed': True})
+    reqs = (_j(Path(ws) / 'requirements.json') or {}).get('requirements') or []
+    known_req = {q.get('id') for q in reqs}
     met = set()
-    for r in recs.values():
-        if r['type'].endswith('.SecurityControl'): met.update(attrs(r['id']).get('meets_requirements') or [])
-    for q in ((_j(Path(ws) / 'requirements.json') or {}).get('requirements') or []):   # SEC-S07
-        if q.get('category') == 'security' and q.get('status') != 'retired' and q.get('id') not in met:
-            out.append({'rule': 'SEC-S07', 'record': q.get('id'), 'outcome': 'non_compliant', 'message': 'a security requirement that no control meets (meets_requirements) — PL-8, GV.PO'})
+    for i, r in recs.items():
+        if r['type'].endswith('.SecurityControl') and active_control(recs, i):
+            ids = attrs(i).get('meets_requirements') or []
+            met.update(ids)
+            for q in ids:   # SEC-S07: a control names a requirement the registry does not hold (AUD-05)
+                if q not in known_req: add('SEC-S07', i, True, f'meets_requirements names {q}, which is not in requirements.json — PL-8, GV.PO')
+    for q in reqs:   # SEC-S07: retired and superseded requirements ask nothing any more (AUD-05)
+        if q.get('category') == 'security' and q.get('status') not in ('retired', 'superseded') and q.get('id') not in met:
+            add('SEC-S07', q.get('id'), q.get('status') == 'confirmed', 'a security requirement that no control meets (meets_requirements) — PL-8, GV.PO'
+                + ('' if q.get('status') == 'confirmed' else f" — not decidable while the requirement is {q.get('status') or 'unconfirmed'}"))
+    # SEC-S08: personal data held by an entity, or by one of its fields (AUD-12); accessed by a component or an API operation
+    pfield = {i for i, r in recs.items() if r['type'] == 'A3.DataAttribute' and attrs(i).get('personal_information') is True}
     pii = {i for i, r in recs.items() if r['type'] == 'A3.DataEntity' and attrs(i).get('personal_information') is True}
-    users = sorted({l['source'] for l in rels if l.get('kind') == 'access' and l.get('target') in pii and (recs.get(l['source']) or {}).get('type') == 'A3.ApplicationComponent'})
-    for c in users:   # SEC-S08
-        audited = any(m['relationship'] == 'PROTECTS' and m['target']['id'] == c and re.match(r'AU-(2|12)\b', str(attrs(m['source']['id']).get('control_id') or '')) for m in maps)
-        if not audited:
-            out.append({'rule': 'SEC-S08', 'record': c, 'outcome': 'non_compliant', 'message': 'a component that accesses personal data has no audit control (AU-2 or AU-12) protecting it — DE.CM'})
+    pii |= {l['source'] for l in rels if l.get('target') in pfield and (recs.get(l['source']) or {}).get('type') == 'A3.DataEntity'}
+    pii |= {l['target'] for l in rels if l.get('source') in pfield and (recs.get(l['target']) or {}).get('type') == 'A3.DataEntity'}
+    users = sorted({l['source'] for l in rels if l.get('kind') == 'access' and l.get('target') in pii
+                    and (recs.get(l['source']) or {}).get('type') in ('A3.ApplicationComponent', 'A3.APIOperation')})
+    audit = lambda i: any(m['relationship'] == 'PROTECTS' and m['target']['id'] == i and active_control(recs, m['source']['id'])
+                          and re.match(r'AU-(2|12)\b', str(attrs(m['source']['id']).get('control_id') or '')) for m in maps)
+    near = lambda i: {l['target'] for l in rels if l.get('source') == i} | {l['source'] for l in rels if l.get('target') == i}
+    for c in users:
+        is_op = (recs.get(c) or {}).get('type') == 'A3.APIOperation'
+        holders = {c} | ({x for x in near(c) if (recs.get(x) or {}).get('type') in ('A3.ApplicationComponent', 'A3.ApplicationInterface')} if is_op else set())
+        if not any(audit(x) for x in holders):   # an operation is audited by its own control, or by the interface or component that serves it
+            add('SEC-S08', c, not planned(c), f"{'an API operation' if is_op else 'a component'} that accesses personal data has no audit control (AU-2 or AU-12) protecting it — DE.CM"
+                + (' — not decidable while it is planned' if planned(c) else ''))
     for L in S_NAMES:   # a security layer this design leaves empty — said, not hidden
         if not any(r['type'].endswith(('.SecurityControl', '.Threat')) and attrs(i).get('security_layer') == L for i, r in recs.items()):
-            out.append({'rule': 'SEC-LAYER', 'record': L, 'outcome': 'unresolved', 'message': f'{S_NAMES[L]} has no controls or threats in this design'})
+            add('SEC-LAYER', L, False, f'{S_NAMES[L]} has no controls or threats in this design')
+    held = exceptions(ws, today)
+    for f in out:
+        if (f['rule'], f['record']) in held: f['outcome'] = 'exception_approved'; f['exception'] = held[(f['rule'], f['record'])]
     return out
 
 
@@ -171,15 +231,24 @@ def review_data(ws):
     """The security standard's findings (sdem comply) with SEC-S07, SEC-S08 and SEC-LAYER, the exposed records, and personal data with no SC-28."""
     r = sdem('comply', '--workspace', ws, '--json')
     try: comply = json.loads(r.stdout)
-    except ValueError: raise ReviewError(r.stdout + r.stderr)
-    findings = [f for f in (comply.get('findings') or comply.get('items') or []) if str(f.get('rule', '')).startswith('SEC-') and f.get('outcome') in ('non_compliant', 'unresolved')]
-    findings += computed_findings(ws)   # SEC-S07, SEC-S08, SEC-LAYER
+    except ValueError: raise ReviewError(f'sdem comply did not answer (exit {r.returncode}): ' + (r.stderr or r.stdout).strip()[-600:])
+    if not isinstance(comply, dict) or not isinstance(comply.get('findings'), list):   # AUD-06: never an empty review from an answer it cannot read
+        raise ReviewError(f'sdem comply answered in a form this extension does not know (exit {r.returncode}) — nothing is reported rather than a wrong all-clear')
+    std = MANIFEST.get('standard_id', 'SEC')
+    if not any((g.get('id') == std and g.get('kind') == 'standard') for g in comply.get('groups') or []):
+        raise ReviewError(f"the security standard ({std}) is not in {ws}'s profile — switch the extension on (sdem profile include ext:security), or put the standard back; "
+                          'without it the review would report no findings, which is not the same as none')
+    ours = [f for f in comply['findings'] if ((f.get('standard') or {}).get('id') == std)]
+    findings = [f for f in ours if f.get('outcome') in ('non_compliant', 'unresolved')]
+    computed = computed_findings(ws)   # SEC-S07, SEC-S08, SEC-LAYER
+    excepted = [f for f in ours + computed if f.get('outcome') == 'exception_approved']
+    findings += [f for f in computed if f['outcome'] in ('non_compliant', 'unresolved')]
     rows = coverage_rows(ws)
-    unprotected = [x for x in rows if not x['protected'] and (x['personal_information'] or x['type'] in ('A3.ApplicationInterface', 'A4.Path', 'A4.NetworkZone'))]
+    unprotected = [x for x in rows if not x['protected'] and (x['personal_information'] or x['type'] in ('A3.ApplicationInterface', 'A4.Path', 'A4.NetworkZone', 'A4.CommunicationNetwork', 'A4.InfrastructureComponent'))]
     no_rest = [x for x in rows if x['personal_information'] and x['protected'] and not any(str(c['control_id'] or '').startswith('SC-28') for c in x['controls'])]   # SEC-S01: at rest, specifically
     order = {'non_compliant': 0, 'unresolved': 1}
     findings.sort(key=lambda f: (order.get(f.get('outcome'), 2), f.get('rule', ''), str(f.get('record', ''))))
-    return {'findings': findings, 'unprotected': unprotected, 'personal_data_without_sc28': no_rest}
+    return {'findings': findings, 'excepted': excepted, 'unprotected': unprotected, 'personal_data_without_sc28': no_rest}
 
 
 def cmd_review(a):
@@ -187,7 +256,8 @@ def cmd_review(a):
     except ReviewError as e: print(str(e), file=sys.stderr); return 2
     findings, unprotected, no_rest = d['findings'], d['unprotected'], d['personal_data_without_sc28']
     if a.json: print(json.dumps(d, indent=2)); return 0
-    print(f"Security review of {a.workspace} — {len(findings)} finding(s) from the security standard, {len(unprotected)} exposed record(s) with no control")
+    print(f"Security review of {a.workspace} — {len(findings)} finding(s) from the security rules (the standard and the extension's own checks), "
+          f"{len(d['excepted'])} under a person's exception, {len(unprotected)} exposed record(s) with no control")
     for f in findings: print(f"  {f.get('outcome'):<14} {f.get('rule'):<9} {f.get('record')}  {f.get('message', '')}")
     for x in no_rest: print(f"  no SC-28        {x['security_layer']:<9} {x['id']}  personal data with no protection at rest")
     for x in unprotected: print(f"  no control     {x['security_layer']:<9} {x['id']}  {x['type']}")
@@ -210,7 +280,8 @@ def document_md(ws):
          '## Summary', '',
          f"{len(rows)} records in scope across A1–A4; {sum(r['protected'] for r in rows)} protected by a control of their own. "
          f"{count('SecurityControl', 'control', 'controls')}, {count('Threat', 'threat', 'threats')}, {count('TrustBoundary', 'trust boundary', 'trust boundaries')}. "
-         f"{sum(1 for f in rev['findings'] if f.get('outcome') == 'non_compliant')} finding(s) not compliant, {sum(1 for f in rev['findings'] if f.get('outcome') == 'unresolved')} unresolved.", '',
+         f"{sum(1 for f in rev['findings'] if f.get('outcome') == 'non_compliant')} finding(s) not compliant, {sum(1 for f in rev['findings'] if f.get('outcome') == 'unresolved')} unresolved"
+         f"{(', ' + str(len(rev['excepted'])) + ' under a person' + chr(39) + 's exception') if rev['excepted'] else ''}.", '',
          '| Security layer | Records | Protected | Controls | Threats |', '|---|---|---|---|---|']
     for c, n in S_NAMES.items():
         mine = [x for x in rows if x['security_layer'] == c]
@@ -260,6 +331,15 @@ def cmd_document(a):
     return 0
 
 
+def cmd_remove(a):
+    """AUD-01: switch security off in a workspace — a person's decision. SDEM archives the security layer and every connection that
+    touches it (archive/ext-security-<date>.json), keeps their ids retired, and takes ext:security out of the profile (MX-16)."""
+    if sdem('profile', 'exclude', '--help').returncode != 0:
+        print('sdem security remove: this SDEM cannot switch an extension off (sdem profile exclude, MX-16) — reinstall SDEM 0.19.0 from its tag (2026-11-19 or later)', file=sys.stderr); return 2
+    args = ['profile', 'exclude', 'ext:security', '--workspace', a.workspace, '--person', a.person, '--reason', a.reason] + (['--dry-run'] if a.dry_run else []) + (['--json'] if a.json else [])
+    r = sdem(*args); sys.stdout.write(r.stdout); sys.stderr.write(r.stderr); return r.returncode
+
+
 def cmd_propose(a):
     args = ['change', 'propose', a.file, '--workspace', a.workspace, '--agent', 'sdem-layer-s', '--person', a.person] + (['--dry-run'] if a.dry_run else []) + (['--json'] if a.json else [])
     r = sdem(*args); sys.stdout.write(r.stdout); sys.stderr.write(r.stderr); return r.returncode
@@ -276,13 +356,16 @@ def main(argv=None):
         p = sub.add_parser(name, help=h); p.add_argument('--workspace', required=True); p.add_argument('--json', action='store_true')
     p = sub.add_parser('document', help='the security review as a readable document (Markdown): findings, coverage, threats, the STRIDE checklist')
     p.add_argument('--workspace', required=True); p.add_argument('-o', '--out', help='a file; without it, the document is printed')
+    p = sub.add_parser('remove', help="switch security off in a workspace — its layer and connections are archived, not lost (a person's decision)")
+    p.add_argument('--workspace', required=True); p.add_argument('--person', required=True); p.add_argument('--reason', required=True)
+    p.add_argument('--dry-run', action='store_true'); p.add_argument('--json', action='store_true')
     p = sub.add_parser('propose', help='controls, threats and boundaries into the security layer, as a change set a person accepts')
     p.add_argument('file'); p.add_argument('--workspace', required=True); p.add_argument('--person', required=True); p.add_argument('--dry-run', action='store_true'); p.add_argument('--json', action='store_true')
     a = ap.parse_args(argv)
     v = re.search(r'\d+\.\d+\.\d+', sdem('--version').stdout or '')
     if v and not supported(v.group(0), MANIFEST['sdem']):
         print(f"sdem security: SDEM {v.group(0)} is not one this extension supports ({MANIFEST['sdem']})", file=sys.stderr); return 1
-    return {'catalogue': cmd_catalogue, 'coverage': cmd_coverage, 'threats': cmd_threats, 'review': cmd_review, 'document': cmd_document, 'propose': cmd_propose}[a.command](a)
+    return {'catalogue': cmd_catalogue, 'coverage': cmd_coverage, 'threats': cmd_threats, 'review': cmd_review, 'document': cmd_document, 'remove': cmd_remove, 'propose': cmd_propose}[a.command](a)
 
 
 def entry():

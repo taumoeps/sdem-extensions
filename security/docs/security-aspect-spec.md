@@ -98,6 +98,21 @@ A value not given is `unresolved`, never compliant (PR-11a, PR-20) — e.g. the 
 
 Not yet: the evidence in `control_evidence` is a reference only — nothing checks its content, age or result (the review's finding D); approval-time rules that block are not shipped (finding C). Both are next (P1).
 
+**As built (0.1.3, 2026-11-19 — after the audit, [`audit-2026-11-19.md`](audit-2026-11-19.md)):**
+- **Only a control that can act counts** — not one marked `not_applicable`, retired or deprecated — for protection, S07, S08 and SC-28.
+- **The computed checks follow the standard's own rules (PR-11a):** not decidable yet → `unresolved` (a planned component or operation; a
+  requirement still proposed); a person's exception holds any of them (`sdem exception grant --rule SEC-S08`, MX-17 — the pack lists them
+  as `computed_rules`). S07 skips retired and superseded requirements and reports a control naming a requirement the registry lacks.
+  S08 reaches personal data held on a field (`A3.DataAttribute`) and access by an API operation (audited by its own control, or by the
+  interface or component that serves it).
+- **One scope:** coverage covers what a control may PROTECT and the STRIDE checklist what a threat may THREATEN — both read from the pack's
+  link types. Added: THREATENS to a business actor; PROTECTS and THREATENS to `A3.DataAttribute`, `A2.BusinessObject`,
+  `A4.InfrastructureComponent`, `A4.CommunicationNetwork`. A field is protected through its data entity. STRIDE per element now
+  matches §7 (a process all six; an API operation includes R).
+- **`review` never reports an all-clear it cannot vouch for:** it stops with a message when `sdem comply` fails, answers in an unknown
+  form, or the SEC standard is not in the profile; it takes findings by the standard's id, not by a `SEC-` prefix.
+- **`sdem security remove`** switches it off (MX-16): the layer and its connections archived, their ids retired, the design still passing.
+
 **Every rule is a warning.** Switching security on in an existing design must not stop its work: with errors, `sdem check` (and so `sdem connect`, which refuses a change that leaves the check failing) would fail before the first control could be added. `sdem comply` and `sdem security review` report every finding; an organisation that wants them to block adds its own rules at `error` in its profile.
 
 ## 7. Commands (`sdem security …`, through EXT-15)

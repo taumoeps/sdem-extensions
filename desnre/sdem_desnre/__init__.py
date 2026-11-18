@@ -421,30 +421,44 @@ def extension_results(ws, files):
     incl = [i[4:] for i in ((files.get('sdem-profile.json') or {}).get('includes') or []) if isinstance(i, str) and i.startswith('ext:')]
     for name in incl:
         for cmd in EXT_RESULTS.get(name, ()):
-            r = run_sdem(ws, [name, cmd, '--workspace', str(ws), '--json'])
+            try: r = run_sdem(ws, [name, cmd, '--workspace', str(ws), '--json'])
+            except (subprocess.TimeoutExpired, OSError): continue   # AUD-30: a command that hangs or cannot start is left out — the design still publishes
             try: d = json.loads(r.stdout) if r.returncode == 0 else None
             except ValueError: d = None
             if isinstance(d, dict):
                 d.pop('workspace', None)
                 out.setdefault(name, {})[cmd] = d
         if name in EXT_DOCUMENTS:
-            r = run_sdem(ws, [name, EXT_DOCUMENTS[name], '--workspace', str(ws)])
-            if r.returncode == 0 and r.stdout.strip(): out.setdefault(name, {})['document'] = r.stdout
+            try: r = run_sdem(ws, [name, EXT_DOCUMENTS[name], '--workspace', str(ws)])
+            except (subprocess.TimeoutExpired, OSError): r = None
+            if r is not None and r.returncode == 0 and r.stdout.strip(): out.setdefault(name, {})['document'] = no_local_paths(r.stdout, ws)
     return out
 
 
+LOCAL = re.compile(r"""(?:[A-Za-z]:[\\/]|/)[^\s"'`<>|,;)]*""")   # an absolute path, Unix or Windows, up to a space or a quote
+
+
 def no_local_paths(x, ws):
-    """0.7.8: what is published names no folder on the architect's computer — a path inside the workspace becomes relative to it,
-    any other absolute path its file name only (`profile show` and `check` report where files are)."""
-    root = Path(ws).resolve()
-    def fix(t):
-        if not isinstance(t, str) or len(t) < 2 or '\n' in t or len(t) > 1000: return t
+    """0.7.8, 0.7.10 (AUD-25): what is published names no folder on the architect's computer. A path inside the workspace becomes
+    relative to it; a file elsewhere becomes its file name; a folder elsewhere becomes '…' — never a name such as the user's. Also
+    inside longer text (a message naming a file). Only paths in the workspace, the home folder or the temporary folders are changed —
+    an API path such as /payments, a duration like ~200ms, or /tmp and /etc in a sentence are left as they are."""
+    import tempfile
+    root, home = Path(ws).resolve(), Path.home().resolve()
+    private = [home, Path(tempfile.gettempdir()).resolve()]   # where a person's own folders are: their home, the temporary folders
+    def one(t):
         try:
-            p = Path(t).expanduser()
-            if not p.is_absolute() or not (p.exists() or str(p).startswith(str(Path.home()))): return t   # an API path such as /payments is not a file here
+            p = Path(t)
+            if not p.is_absolute(): return t
             q = p.resolve()
-            return q.relative_to(root).as_posix() or '.' if q == root or root in q.parents else q.name
-        except (OSError, ValueError): return Path(t).name
+            if q == root or root in q.parents: return q.relative_to(root).as_posix() or '.'
+            if not any(q == d or d in q.parents for d in private) and not t.startswith(str(Path.home())): return t   # /tmp, /etc, /payments: not personal
+            return q.name if q.suffix else '…'
+        except (OSError, ValueError, RuntimeError): return t
+    def fix(t):
+        if not isinstance(t, str) or len(t) < 2 or len(t) > 20000: return t
+        if '/' not in t and '\\' not in t: return t
+        return LOCAL.sub(lambda m: one(m.group(0)), t)
     if isinstance(x, dict): return {k: no_local_paths(v, ws) for k, v in x.items()}
     if isinstance(x, list): return [no_local_paths(v, ws) for v in x]
     return fix(x)

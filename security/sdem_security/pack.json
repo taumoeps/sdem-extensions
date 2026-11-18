@@ -2,31 +2,31 @@
  "format": "sdem-profile/1",
  "name": "sdem-security",
  "version": 1,
- "description": "The security architecture (sdem-security, spec security/docs/security-aspect-spec.md): controls, threats and trust boundaries in five security layers S1\u2013S5, the security views of A1, A2, A3 data, A3 application and A4 \u2014 on NIST SP 800-53 Rev. 5 and CSF 2.0, STRIDE and Zero Trust (SP 800-207).",
+ "description": "The security architecture (sdem-security, spec security/docs/security-aspect-spec.md): controls, threats and trust boundaries in five security layers S1–S5, the security views of A1, A2, A3 data, A3 application and A4 — on NIST SP 800-53 Rev. 5 and CSF 2.0, STRIDE and Zero Trust (SP 800-207).",
  "layers": [
   {
    "code": "S",
    "name": "Security Architecture",
    "position": "across",
    "file": "security.json",
-   "description": "controls, threats and trust boundaries across A1\u2013A4, each in one security layer S1\u2013S5",
+   "description": "controls, threats and trust boundaries across A1–A4, each in one security layer S1–S5",
    "source": "sdem-security (NIST SP 800-53 Rev. 5, CSF 2.0, STRIDE, SP 800-207)"
   }
  ],
  "types": [
   {
    "type": "SEC.S.SecurityControl",
-   "description": "a measure that protects something \u2014 an NIST SP 800-53 control as this design applies it",
+   "description": "a measure that protects something — an NIST SP 800-53 control as this design applies it",
    "archimate": "Requirement"
   },
   {
    "type": "SEC.S.Threat",
-   "description": "what could go wrong to what \u2014 STRIDE",
+   "description": "what could go wrong to what — STRIDE",
    "archimate": "Assessment"
   },
   {
    "type": "SEC.S.TrustBoundary",
-   "description": "where trust changes and policy is enforced \u2014 NIST SP 800-207",
+   "description": "where trust changes and policy is enforced — NIST SP 800-207",
    "archimate": "Grouping"
   }
  ],
@@ -43,7 +43,7 @@
     "S5"
    ],
    "required": true,
-   "description": "S1 Business \u00b7 S2 Service Domain \u00b7 S3 Data \u00b7 S4 Application \u00b7 S5 Technology security architecture"
+   "description": "S1 Business · S2 Service Domain · S3 Data · S4 Application · S5 Technology security architecture"
   },
   {
    "entity": "SEC.S.SecurityControl",
@@ -108,7 +108,7 @@
    "entity": "SEC.S.SecurityControl",
    "name": "control_evidence",
    "type": "list<string>",
-   "description": "kind:reference \u2014 what shows it is in place (needed once implemented)"
+   "description": "kind:reference — what shows it is in place (needed once implemented)"
   },
   {
    "entity": "SEC.S.Threat",
@@ -129,7 +129,7 @@
    "name": "stride",
    "type": "list<string>",
    "required": true,
-   "description": "one or more of S, T, R, I, D, E \u2014 Spoofing, Tampering, Repudiation, Information disclosure, Denial of service, Elevation of privilege"
+   "description": "one or more of S, T, R, I, D, E — Spoofing, Tampering, Repudiation, Information disclosure, Denial of service, Elevation of privilege"
   },
   {
    "entity": "SEC.S.Threat",
@@ -197,7 +197,7 @@
    "entity": "SEC.S.TrustBoundary",
    "name": "enforcement",
    "type": "string",
-   "description": "what enforces it \u2014 e.g. an API gateway, mutual TLS"
+   "description": "what enforces it — e.g. an API gateway, mutual TLS"
   }
  ],
  "link_kinds": [
@@ -533,6 +533,87 @@
     "design_document"
    ],
    "description": "inside the boundary"
+  },
+  {
+   "source_type": "SEC.S.SecurityControl",
+   "relationship": "PROTECTS",
+   "target_type": "A3.DataAttribute",
+   "required_evidence": [
+    "design_document"
+   ],
+   "description": "the control protects it"
+  },
+  {
+   "source_type": "SEC.S.SecurityControl",
+   "relationship": "PROTECTS",
+   "target_type": "A2.BusinessObject",
+   "required_evidence": [
+    "design_document"
+   ],
+   "description": "the control protects it"
+  },
+  {
+   "source_type": "SEC.S.SecurityControl",
+   "relationship": "PROTECTS",
+   "target_type": "A4.InfrastructureComponent",
+   "required_evidence": [
+    "design_document"
+   ],
+   "description": "the control protects it"
+  },
+  {
+   "source_type": "SEC.S.SecurityControl",
+   "relationship": "PROTECTS",
+   "target_type": "A4.CommunicationNetwork",
+   "required_evidence": [
+    "design_document"
+   ],
+   "description": "the control protects it"
+  },
+  {
+   "source_type": "SEC.S.Threat",
+   "relationship": "THREATENS",
+   "target_type": "A1.BusinessActor",
+   "required_evidence": [
+    "design_document"
+   ],
+   "description": "the threat applies to it"
+  },
+  {
+   "source_type": "SEC.S.Threat",
+   "relationship": "THREATENS",
+   "target_type": "A3.DataAttribute",
+   "required_evidence": [
+    "design_document"
+   ],
+   "description": "the threat applies to it"
+  },
+  {
+   "source_type": "SEC.S.Threat",
+   "relationship": "THREATENS",
+   "target_type": "A2.BusinessObject",
+   "required_evidence": [
+    "design_document"
+   ],
+   "description": "the threat applies to it"
+  },
+  {
+   "source_type": "SEC.S.Threat",
+   "relationship": "THREATENS",
+   "target_type": "A4.InfrastructureComponent",
+   "required_evidence": [
+    "design_document"
+   ],
+   "description": "the threat applies to it"
+  },
+  {
+   "source_type": "SEC.S.Threat",
+   "relationship": "THREATENS",
+   "target_type": "A4.CommunicationNetwork",
+   "required_evidence": [
+    "design_document"
+   ],
+   "description": "the threat applies to it"
   }
  ],
  "names": {
@@ -547,5 +628,17 @@
  },
  "includes": [
   "security-standard.json"
+ ],
+ "computed_rules": [
+  {
+   "id": "SEC-S07",
+   "message": "every security requirement is met by a control (meets_requirements) — PL-8, GV.PO",
+   "severity": "warning"
+  },
+  {
+   "id": "SEC-S08",
+   "message": "a component or API operation that accesses personal data is protected by an audit control (AU-2 or AU-12) — DE.CM",
+   "severity": "warning"
+  }
  ]
 }

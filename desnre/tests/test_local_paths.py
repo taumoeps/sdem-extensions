@@ -15,6 +15,14 @@ class NoLocalPaths(unittest.TestCase):
             self.assertEqual(got['chain'][0]['file'], 'std/a.json'); self.assertEqual(got['inc'], ['elsewhere.json'])
             self.assertEqual(got['workspace'], '.'); self.assertEqual(got['api'], '/payments/{id}'); self.assertEqual(got['text'], 'a sentence')
 
+    def test_no_crash_no_username_and_paths_inside_text(self):   # AUD-25
+        home = str(Path.home())
+        with tempfile.TemporaryDirectory() as t:
+            ws = Path(t) / 'ws'; ws.mkdir()
+            got = D.no_local_paths({'d': '~200ms', 'h': home, 'msg': f'see {home}/nowhere/x.json for it', 'etc': 'logs go to /tmp on the node', 'api': '/payments/{id}'}, ws)
+            self.assertEqual(got['d'], '~200ms'); self.assertNotIn(Path(home).name, got['h']); self.assertNotIn(home, got['msg']); self.assertIn('x.json', got['msg'])
+            self.assertEqual(got['etc'], 'logs go to /tmp on the node'); self.assertEqual(got['api'], '/payments/{id}')
+
 
 if __name__ == '__main__':
     unittest.main()

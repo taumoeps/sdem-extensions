@@ -11,6 +11,7 @@ SDEM = shutil.which('sdem', path=str(Path(sys.executable).parent)) or shutil.whi
 import os
 REQUIRED = os.environ.get('SDEM_REQUIRED') == '1'   # in CI: SDEM is installed, so these tests run — never skipped
 if REQUIRED and not SDEM: raise SystemExit('SDEM_REQUIRED=1 but no sdem in this environment')
+HAS_MX16 = bool(SDEM) and subprocess.run([SDEM, 'profile', 'exclude', '--help'], capture_output=True).returncode == 0   # SDEM 0.19.0 as tagged 2026-11-19: exclude, computed rules
 DESIGN = {'layer': 'S', 'reason': 'a made-up security design', 'changes': [
     {'op': 'add', 'record': {'id': 'SEC-SC28', 'type': 'SEC.S.SecurityControl', 'version': '1', 'name': 'Protection at rest', 'lifecycle_status': 'planned',
                              'attributes': {'security_layer': 'S3', 'control_id': 'SC-28', 'csf_function': 'PR', 'control_kind': 'preventive', 'implementation_status': 'planned'}}},
@@ -90,9 +91,26 @@ class SecurityTests(unittest.TestCase):
             self.assertIn(h, md)
         self.assertIn('SEC-S08', md); self.assertIn('Payment instruction disclosed (THR-DISCLOSE)', md)   # a finding, and the threat with its name
 
-    def test_review_runs_the_security_standard(self):  # MX-14
+    def test_review_runs_the_security_standard(self):  # MX-14 — and finds something (an empty list would pass all(); AUD-06)
         d = run('security', 'review', '--workspace', self.ws, '--json')
-        self.assertIn('findings', d); self.assertTrue(all(str(f['rule']).startswith('SEC-') for f in d['findings']))
+        self.assertTrue(d['findings'])
+        self.assertTrue(all(f.get('computed') or (f.get('standard') or {}).get('id') == 'SEC' for f in d['findings']))
+        self.assertIn('SEC-LAYER', {f['rule'] for f in d['findings']})   # the made-up design has controls only in S3
+
+    @unittest.skipUnless(HAS_MX16, 'needs SDEM 0.19.0 as tagged on 2026-11-19 or later (MX-16, MX-17)')
+    def test_a_person_may_grant_an_exception_to_a_computed_rule(self):  # MX-17, AUD-02
+        out = run('exception', 'grant', '--workspace', self.ws, '--rule', 'SEC-S08', '--records', 'CMP-PAY-CAPTURE', '--expires', '2099-12-31',
+                  '--reason', 'audit lands with the platform release', '--person', 'steven', '--dry-run')
+        self.assertIn('SEC-S08', out)
+
+    @unittest.skipUnless(HAS_MX16, 'needs SDEM 0.19.0 as tagged on 2026-11-19 or later (MX-16, MX-17)')
+    def test_removing_security_leaves_a_design_that_passes(self):  # MX-16, AUD-01
+        ws = self.tmp / 'removed'; shutil.copytree(self.ws, ws)
+        d = run('security', 'remove', '--workspace', ws, '--person', 'steven', '--reason', 'security moves to its own workspace', '--json')
+        self.assertTrue(d['connections_retired']); self.assertFalse((ws / 'security.json').exists())
+        self.assertTrue((ws / d['archive']).exists())
+        self.assertTrue(run('check', '--workspace', ws, '--require-recorded', '--json')['ok'])
+        self.assertNotIn('ext:security', json.loads((ws / 'sdem-profile.json').read_text())['includes'])
 
 
 if __name__ == '__main__':

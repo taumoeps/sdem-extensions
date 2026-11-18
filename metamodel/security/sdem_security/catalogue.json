@@ -3,10 +3,12 @@
 "title": "Electronic (OSCAL) Version of NIST SP 800-53 Rev 5.2.0 Controls and SP 800-53A Rev 5.2.0 Assessment Procedures",
 "version": "5.2.0",
 "published": "2026-10-22T11:30:00.00000-00:00",
-"url": "https://raw.githubusercontent.com/usnistgov/oscal-content/main/nist.gov/SP800-53/rev5/json/NIST_SP-800-53_rev5_catalog.json",
+"url": "https://raw.githubusercontent.com/usnistgov/oscal-content/5006f18c8047643eaa70e35dd0d20a58bcc41856/nist.gov/SP800-53/rev5/json/NIST_SP-800-53_rev5_catalog.json",
 "sha256": "64ca6b4161de51ab6af098a7d101d326f14c95e1abf721396cd8a049e8115eeb",
 "licence": "NIST OSCAL content: \"As a work of the United States government, this project is in the public domain within the United States ... we waive copyright and related rights in the work worldwide\" (usnistgov/oscal-content LICENSE.md, read 2026-11-18)",
-"kept": "control ids, titles and families only; the full text is at the url"
+"kept": "control ids, titles and families only; the full text is at the url",
+"commit": "5006f18c8047643eaa70e35dd0d20a58bcc41856",
+"pinned": "2026-11-19: the commit whose file has this sha256 (checked by downloading it) \u2014 MX-29, AUD-20"
 },
 "controls": [
 {

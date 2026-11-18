@@ -45,11 +45,14 @@ def sdem(*args):
 
 
 def supported(version, spec):
-    v = tuple(int(x) for x in re.findall(r'\d+', version)[:3])
+    """EXT-04: is `version` in `spec` (clauses >=, >, <=, <, ==, joined by commas)? An unreadable clause is a ValueError, never a pass."""
+    tup = lambda x: (tuple(int(n) for n in re.findall(r'\d+', x)[:3]) + (0, 0, 0))[:3]
+    v = tup(version)
     for clause in spec.split(','):
-        op, want = re.match(r'\s*(>=|<)\s*([\d.]+)', clause).groups()
-        w = tuple(int(x) for x in want.split('.')); w += (0,) * (3 - len(w))
-        if not (v >= w if op == '>=' else v < w): return False
+        m = re.match(r'\s*(>=|<=|==|>|<)\s*([\d.]+)\s*$', clause)
+        if not m: raise ValueError(f'version range {spec!r}: cannot read {clause.strip()!r}')
+        op, w = m.group(1), tup(m.group(2))
+        if not {'>=': v >= w, '<=': v <= w, '==': v == w, '>': v > w, '<': v < w}[op]: return False
     return True
 
 
@@ -80,6 +83,35 @@ def workspace(ws):
     return recs, layer_of, rels, maps
 
 
+_CORE = {}
+def type_parents(ws):
+    """Each record type's parents, as SDEM reports them (`sdem types <layer> --json`: extends) — for the types the workspace's profile and
+    its extensions add as well as SDEM's own. Empty when SDEM cannot be asked; then only exact types match."""
+    out = {}
+    for code, _ in LAYERS:
+        try: d = json.loads(sdem('types', code, '--workspace', ws, '--json').stdout or '{}')
+        except (ValueError, OSError): continue
+        for t in d.get('types') or []: out[t['type']] = list(t.get('extends') or [])
+    return out
+
+
+def core_type(ws, t):
+    """MX-32a: the type as security's scope sees it. SDEM's own types (A4.Node) match exactly; a type a profile or another extension adds
+    inside a layer (NET.A4.Firewall extends A4.Node) is placed by its nearest SDEM ancestor — so coverage, the checklist and SEC-S08 reach it.
+    Core types are not widened by inheritance (A4.Artifact stays itself, though it extends A4.InfrastructureComponent)."""
+    if str(t).count('.') == 1: return t   # an SDEM type: A4.Node
+    key = str(Path(ws).resolve())
+    if key not in _CORE: _CORE[key] = type_parents(ws)
+    par, seen, todo = _CORE[key], set(), [t]
+    while todo:
+        x = todo.pop(0)
+        if x in seen: continue
+        seen.add(x)
+        if x != t and x.count('.') == 1: return x
+        todo += par.get(x, [])
+    return t
+
+
 def active_control(recs, cid):
     """AUD-03: a control counts only while it can act — not retired or deprecated, and not marked not_applicable."""
     c = recs.get(cid) or {}
@@ -104,7 +136,7 @@ def security_layer(r, layer):
 
 def cmd_catalogue(a):
     words = [w.lower() for w in a.words]; cat = catalogue()
-    hits = [c for c in cat['controls'] if not c.get('withdrawn') and all(re.search(r'\b' + re.escape(w) + r'\b', (c['id'] + ' ' + c['title'] + ' ' + c['family_title']).lower()) for w in words)]
+    hits = [c for c in cat['controls'] if not c.get('withdrawn') and all(re.search(r'(?<![\w-])' + re.escape(w) + r'(?![\w])', (c['id'] + ' ' + c['title'] + ' ' + c['family_title']).lower()) for w in words)]   # AUD-08: 'IA-2(1)' finds IA-2(1)
     hits = hits[:a.limit]
     if a.json: print(json.dumps({'source': cat['source'], 'count': len(hits), 'items': hits}, indent=2)); return 0
     if not hits: print(f"no NIST SP 800-53 Rev. 5 control matches {' '.join(a.words)!r}"); return 0
@@ -119,21 +151,22 @@ def coverage_rows(ws):
     rows = []
     for rid, r in sorted(recs.items(), key=lambda kv: (layer_of[kv[0]], kv[0])):
         L = layer_of[rid]
-        if L == 'S' or r['type'] not in PROTECTABLE: continue
+        ct = core_type(ws, r['type'])
+        if L == 'S' or ct not in PROTECTABLE: continue
         named = [m['source']['id'] for m in by('PROTECTS', 0) if m['target']['id'] == rid]
         controls = [c for c in named if active_control(recs, c)]
         threats = [m['source']['id'] for m in by('THREATENS', 0) if m['target']['id'] == rid]
         enforced = {c: [m['target']['id'] for m in by('ENFORCED_BY', 0) if m['source']['id'] == c] for c in controls}
         at = r.get('attributes') or {}
-        rows.append({'id': rid, 'name': r.get('name'), 'type': r['type'], 'layer': L, 'security_layer': security_layer(r, L),
+        rows.append({'id': rid, 'name': r.get('name'), 'type': r['type'], **({'kind_of': ct} if ct != r['type'] else {}), 'layer': L, 'security_layer': security_layer({**r, 'type': ct}, L),
                      'classification': at.get('access_classification') or r.get('access_classification'), 'personal_information': at.get('personal_information'),
                      'controls': [{'id': c, 'control_id': ((recs.get(c) or {}).get('attributes') or {}).get('control_id'), 'enforced_by': enforced[c]} for c in controls],
                      'threats': threats, 'protected': bool(controls), 'inactive_controls': [c for c in named if c not in controls]})
     by_id = {x['id']: x for x in rows}   # a field is protected by what protects its data entity (the same store, the same controls)
     for x in rows:
-        if x['type'] == 'A3.DataAttribute' and not x['protected']:
-            ents = sorted({l['source'] for l in rels if l.get('target') == x['id'] and (by_id.get(l['source']) or {}).get('type') == 'A3.DataEntity'}
-                          | {l['target'] for l in rels if l.get('source') == x['id'] and (by_id.get(l['target']) or {}).get('type') == 'A3.DataEntity'})
+        if x.get('kind_of', x['type']) == 'A3.DataAttribute' and not x['protected']:
+            ent = lambda i: (by_id.get(i) or {}).get('kind_of', (by_id.get(i) or {}).get('type')) == 'A3.DataEntity'
+            ents = sorted({l['source'] for l in rels if l.get('target') == x['id'] and ent(l['source'])} | {l['target'] for l in rels if l.get('source') == x['id'] and ent(l['target'])})
             via = [e for e in ents if by_id[e]['protected']]
             if via: x['protected'] = True; x['protected_through'] = via
     return rows
@@ -141,7 +174,7 @@ def coverage_rows(ws):
 
 def cmd_coverage(a):
     rows = coverage_rows(a.workspace)
-    if a.json: print(json.dumps({'workspace': str(a.workspace), 'count': len(rows), 'protected': sum(r['protected'] for r in rows), 'items': rows}, indent=2)); return 0
+    if a.json: print(json.dumps({'workspace': str(a.workspace), 'count': len(rows), 'protected': sum(r['protected'] for r in rows), 'protected_means': MANIFEST.get('protected_means'), 'items': rows}, indent=2)); return 0
     for s in S_NAMES:
         mine = [r for r in rows if r['security_layer'] == s]
         if not mine: continue
@@ -161,10 +194,11 @@ def threats_data(ws):
             stated.setdefault(m['target']['id'], set()).update(((t.get('attributes') or {}).get('stride') or []))
     out = []
     for rid, r in sorted(recs.items(), key=lambda kv: (layer_of[kv[0]], kv[0])):
-        cats = STRIDE.get(r['type']) if r['type'] in THREATENABLE else None
+        ct = core_type(ws, r['type'])
+        cats = STRIDE.get(ct) if ct in THREATENABLE else None
         if not cats or layer_of[rid] == 'S': continue
         open_ = [c for c in cats if c not in stated.get(rid, set())]
-        out.append({'id': rid, 'name': r.get('name'), 'type': r['type'], 'security_layer': security_layer(r, layer_of[rid]), 'consider': list(cats), 'stated': sorted(stated.get(rid, set())), 'not_yet_considered': open_})
+        out.append({'id': rid, 'name': r.get('name'), 'type': r['type'], **({'kind_of': ct} if ct != r['type'] else {}), 'security_layer': security_layer({**r, 'type': ct}, layer_of[rid]), 'consider': list(cats), 'stated': sorted(stated.get(rid, set())), 'not_yet_considered': open_})
     return out
 
 
@@ -202,18 +236,18 @@ def computed_findings(ws, today=None):
             add('SEC-S07', q.get('id'), q.get('status') == 'confirmed', 'a security requirement that no control meets (meets_requirements) — PL-8, GV.PO'
                 + ('' if q.get('status') == 'confirmed' else f" — not decidable while the requirement is {q.get('status') or 'unconfirmed'}"))
     # SEC-S08: personal data held by an entity, or by one of its fields (AUD-12); accessed by a component or an API operation
-    pfield = {i for i, r in recs.items() if r['type'] == 'A3.DataAttribute' and attrs(i).get('personal_information') is True}
-    pii = {i for i, r in recs.items() if r['type'] == 'A3.DataEntity' and attrs(i).get('personal_information') is True}
-    pii |= {l['source'] for l in rels if l.get('target') in pfield and (recs.get(l['source']) or {}).get('type') == 'A3.DataEntity'}
-    pii |= {l['target'] for l in rels if l.get('source') in pfield and (recs.get(l['target']) or {}).get('type') == 'A3.DataEntity'}
-    users = sorted({l['source'] for l in rels if l.get('kind') == 'access' and l.get('target') in pii
-                    and (recs.get(l['source']) or {}).get('type') in ('A3.ApplicationComponent', 'A3.APIOperation')})
+    kt = lambda i: core_type(ws, (recs.get(i) or {}).get('type', ''))   # MX-32a: a subtype counts as its SDEM type
+    pfield = {i for i in recs if kt(i) == 'A3.DataAttribute' and attrs(i).get('personal_information') is True}
+    pii = {i for i in recs if kt(i) == 'A3.DataEntity' and attrs(i).get('personal_information') is True}
+    pii |= {l['source'] for l in rels if l.get('target') in pfield and kt(l['source']) == 'A3.DataEntity'}
+    pii |= {l['target'] for l in rels if l.get('source') in pfield and kt(l['target']) == 'A3.DataEntity'}
+    users = sorted({l['source'] for l in rels if l.get('kind') == 'access' and l.get('target') in pii and kt(l['source']) in ('A3.ApplicationComponent', 'A3.APIOperation')})
     audit = lambda i: any(m['relationship'] == 'PROTECTS' and m['target']['id'] == i and active_control(recs, m['source']['id'])
                           and re.match(r'AU-(2|12)\b', str(attrs(m['source']['id']).get('control_id') or '')) for m in maps)
     near = lambda i: {l['target'] for l in rels if l.get('source') == i} | {l['source'] for l in rels if l.get('target') == i}
     for c in users:
-        is_op = (recs.get(c) or {}).get('type') == 'A3.APIOperation'
-        holders = {c} | ({x for x in near(c) if (recs.get(x) or {}).get('type') in ('A3.ApplicationComponent', 'A3.ApplicationInterface')} if is_op else set())
+        is_op = kt(c) == 'A3.APIOperation'
+        holders = {c} | ({x for x in near(c) if kt(x) in ('A3.ApplicationComponent', 'A3.ApplicationInterface')} if is_op else set())
         if not any(audit(x) for x in holders):   # an operation is audited by its own control, or by the interface or component that serves it
             add('SEC-S08', c, not planned(c), f"{'an API operation' if is_op else 'a component'} that accesses personal data has no audit control (AU-2 or AU-12) protecting it — DE.CM"
                 + (' — not decidable while it is planned' if planned(c) else ''))
@@ -246,7 +280,7 @@ def review_data(ws):
     excepted = [f for f in ours + computed if f.get('outcome') == 'exception_approved']
     findings += [f for f in computed if f['outcome'] in ('non_compliant', 'unresolved')]
     rows = coverage_rows(ws)
-    unprotected = [x for x in rows if not x['protected'] and (x['personal_information'] or x['type'] in ('A3.ApplicationInterface', 'A4.Path', 'A4.NetworkZone', 'A4.CommunicationNetwork', 'A4.InfrastructureComponent'))]
+    unprotected = [x for x in rows if not x['protected'] and (x['personal_information'] or x.get('kind_of', x['type']) in ('A3.ApplicationInterface', 'A4.Path', 'A4.NetworkZone', 'A4.CommunicationNetwork', 'A4.InfrastructureComponent'))]
     no_rest = [x for x in rows if x['personal_information'] and x['protected'] and not any(str(c['control_id'] or '').startswith('SC-28') for c in x['controls'])]   # SEC-S01: at rest, specifically
     order = {'non_compliant': 0, 'unresolved': 1}
     findings.sort(key=lambda f: (order.get(f.get('outcome'), 2), f.get('rule', ''), str(f.get('record', ''))))
@@ -271,8 +305,12 @@ def document_md(ws):
     them, and the STRIDE checklist — generated, deterministic, nothing invented; every record named with its id."""
     recs, layer_of, rels, maps = workspace(ws)
     rev, rows, chk = review_data(ws), coverage_rows(ws), threats_data(ws)
-    nm = lambda i: f"{(recs.get(i) or {}).get('name') or i} ({i})"
-    cell = lambda t: str(t).replace('|', '\\|').replace('\n', ' ')
+    def safe(t):   # AUD-11: a record's own text cannot make a heading, a list item, a table row or HTML in the document
+        t = re.sub(r'\s+', ' ', str(t)).strip()
+        t = re.sub(r'&(?!(?:amp|lt|gt|quot|#\d+);)', '&amp;', t).replace('<', '&lt;').replace('>', '&gt;')   # safe to apply twice
+        return re.sub(r'^([#>*+-]|\d+\.)', r'\\\1', t)
+    nm = lambda i: f"{safe((recs.get(i) or {}).get('name') or i)} ({i})"
+    cell = lambda t: safe(t).replace('|', '\\|')
     sec = {i: r for i, r in recs.items() if layer_of[i] == 'S'}
     kind = lambda t: str(t).split('.')[-1]
     def count(k, one, many): n = sum(1 for r in sec.values() if kind(r['type']) == k); return f"{n} {one if n == 1 else many}"
@@ -317,7 +355,7 @@ def document_md(ws):
         at = sec[t].get('attributes') or {}
         hits = [m['target']['id'] for m in maps if m['relationship'] == 'THREATENS' and m['source']['id'] == t]
         mit = [l['source'] for l in rels if l.get('kind') == 'mitigates' and l.get('target') == t]
-        L.append(f"| {cell(nm(t))} | {''.join(at.get('stride') or []) or '—'} | {at.get('likelihood') or '—'} · {at.get('impact') or '—'} | {cell(', '.join(nm(h) for h in hits) or '—')} | {cell(', '.join(nm(c2) for c2 in mit) or '— not mitigated')} |")
+        L.append(f"| {cell(nm(t))} | {cell(''.join(at.get('stride') or [])) or '—'} | {at.get('likelihood') or '—'} · {at.get('impact') or '—'} | {cell(', '.join(nm(h) for h in hits) or '—')} | {cell(', '.join(nm(c2) for c2 in mit) or '— not mitigated')} |")
     if not thr: L.append('| — | | | | |')
     L += ['', '## 5. STRIDE checklist — not yet considered', '', 'A prompt for a person, per record: the STRIDE categories that apply to its kind and that no threat in the design states yet. These are not threats the design holds.', '']
     open_ = [x for x in chk if x['not_yet_considered']]
@@ -392,9 +430,13 @@ def main(argv=None):
     p = sub.add_parser('propose', help='controls, threats and boundaries into the security layer, as a change set a person accepts')
     p.add_argument('file'); p.add_argument('--workspace', required=True); p.add_argument('--person', required=True); p.add_argument('--dry-run', action='store_true'); p.add_argument('--json', action='store_true')
     a = ap.parse_args(argv)
-    v = re.search(r'\d+\.\d+\.\d+', sdem('--version').stdout or '')
-    if v and not supported(v.group(0), MANIFEST['sdem']):
-        print(f"sdem security: SDEM {v.group(0)} is not one this extension supports ({MANIFEST['sdem']})", file=sys.stderr); return 1
+    if a.command != 'catalogue':   # the catalogue needs no SDEM; everything else is checked against the versions it supports (EXT-04)
+        try: out = sdem('--version').stdout or ''
+        except OSError: print('sdem security: SDEM is not installed in this environment — install it first (see the README)', file=sys.stderr); return 2
+        v = re.search(r'\d+\.\d+\.\d+', out)
+        if not v: print(f'sdem security: cannot read SDEM\'s version from {out.strip()[:80]!r} — refusing rather than guessing', file=sys.stderr); return 2
+        if not supported(v.group(0), MANIFEST['sdem']):
+            print(f"sdem security: SDEM {v.group(0)} is not one this extension supports ({MANIFEST['sdem']})", file=sys.stderr); return 1
     return {'catalogue': cmd_catalogue, 'coverage': cmd_coverage, 'threats': cmd_threats, 'review': cmd_review, 'document': cmd_document, 'remove': cmd_remove, 'restore': cmd_restore, 'purge': cmd_purge, 'propose': cmd_propose}[a.command](a)
 
 

@@ -96,5 +96,56 @@ class Checks(unittest.TestCase):
         finally: S.sdem = real
 
 
+class Inheritance(unittest.TestCase):   # MX-32a: a type another extension adds inside a layer is placed by its nearest SDEM type
+    def setUp(self):
+        self.ws = Path(tempfile.mkdtemp()); self.addCleanup(shutil.rmtree, self.ws, True)
+        a3 = {'instances': [rec('SVC-1', 'ORG.A3.MicroService', 'active'), rec('ENT-P', 'A3.DataEntity', personal_information=True)],
+              'relationships': [{'source': 'SVC-1', 'kind': 'access', 'target': 'ENT-P'}]}
+        a4 = {'instances': [rec('FW-1', 'NET.A4.Firewall'), rec('ART-1', 'A4.Artifact')], 'relationships': []}
+        for f, d in (('a1-business.json', {'instances': []}), ('a2-service-domain.json', {'instances': []}), ('a3-application.json', a3), ('a4-technology.json', a4),
+                     ('security.json', {'instances': [ctl('SEC-SC7', 'SC-7', 'S5')], 'relationships': []}), ('mappings.json', {'mappings': [link('SEC-SC7', 'PROTECTS', 'FW-1')]})):
+            (self.ws / f).write_text(json.dumps(d))
+        S._CORE[str(self.ws.resolve())] = {'NET.A4.Firewall': ['A4.Node'], 'ORG.A3.MicroService': ['A3.ApplicationComponent'],
+                                           'A4.Artifact': ['A4.InfrastructureComponent'], 'A4.Node': ['A4.InfrastructureComponent']}
+
+    def test_a_subtype_is_in_scope_and_a_core_type_is_not_widened(self):
+        rows = {r['id']: r for r in S.coverage_rows(self.ws)}
+        self.assertTrue(rows['FW-1']['protected']); self.assertEqual(rows['FW-1']['kind_of'], 'A4.Node'); self.assertEqual(rows['FW-1']['security_layer'], 'S5')
+        self.assertNotIn('ART-1', rows)   # A4.Artifact extends InfrastructureComponent, but SDEM's own types match exactly
+        self.assertIn('FW-1', {x['id'] for x in S.threats_data(self.ws)})
+
+    def test_s08_reaches_a_subtype_of_a_component(self):
+        self.assertEqual({f['record'] for f in S.computed_findings(self.ws) if f['rule'] == 'SEC-S08'}, {'SVC-1'})
+
+
+class Hardening(unittest.TestCase):   # AUD-08, AUD-09, AUD-11
+    def test_version_ranges_are_read_strictly(self):
+        self.assertTrue(S.supported('0.19.0', '>=0.19,<0.21')); self.assertFalse(S.supported('0.21.0', '>=0.19,<0.21'))
+        self.assertTrue(S.supported('0.19.2', '>0.19.1,<=0.19.2')); self.assertTrue(S.supported('1.0.0', '==1.0'))
+        with self.assertRaises(ValueError): S.supported('0.19.0', '~=0.19')   # never a silent pass
+
+    def test_the_catalogue_finds_an_enhancement_by_its_id(self):
+        out = __import__('io').StringIO()
+        with __import__('contextlib').redirect_stdout(out): S.cmd_catalogue(SimpleNamespace(words=['IA-2(1)'], limit=5, json=True))
+        self.assertIn('IA-2(1)', [c['id'] for c in json.loads(out.getvalue())['items']])
+
+    def test_a_record_name_cannot_break_the_document(self):
+        ws = Path(tempfile.mkdtemp()); self.addCleanup(shutil.rmtree, ws, True)
+        bad = 'Edge | gateway\n# Injected heading <script>x</script>'
+        for f, d in (('a1-business.json', {'instances': []}), ('a2-service-domain.json', {'instances': []}), ('a4-technology.json', {'instances': []}),
+                     ('a3-application.json', {'instances': [{**rec('IFC-1', 'A3.ApplicationInterface'), 'name': bad}], 'relationships': []}),
+                     ('security.json', {'instances': [{**rec('THR-1', 'SEC.S.Threat', security_layer='S4', stride=['S|T'], likelihood='low', impact='low')}], 'relationships': []}),
+                     ('mappings.json', {'mappings': [link('THR-1', 'THREATENS', 'IFC-1')]})):
+            (ws / f).write_text(json.dumps(d))
+        real = S.sdem
+        S.sdem = lambda *a: SimpleNamespace(stdout=json.dumps({'findings': [], 'groups': [{'id': 'SEC', 'kind': 'standard'}]}) if a[:1] == ('comply',) else '{}', stderr='', returncode=0)
+        try: md = S.document_md(ws)
+        finally: S.sdem = real
+        self.assertNotIn('\n# Injected', md); self.assertNotIn('<script>', md); self.assertIn('&lt;script&gt;', md)
+        self.assertNotIn('&amp;lt;', md)   # escaped once, not twice
+        row = next(l for l in md.splitlines() if l.startswith('| thr-1 (THR-1)'))   # the threats table's row
+        self.assertEqual(len(row.split(' | ')), 5, row)   # the threats table keeps its five columns
+
+
 if __name__ == '__main__':
     unittest.main()

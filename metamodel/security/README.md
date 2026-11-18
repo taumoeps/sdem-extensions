@@ -14,7 +14,7 @@ Security in SDEM is four parts. This package is the first; the others are instal
 
 | Part | What it adds | How you get it |
 |---|---|---|
-| **sdem-security** (this package, 0.2.0) | layer S and its record and link types; the security standard (SEC-S01a…S06b) and its own checks (SEC-S07, SEC-S08, SEC-LAYER); the NIST SP 800-53 catalogue; the commands `catalogue`, `coverage`, `threats`, `review`, `document`, `propose`, `remove`, `restore`, `purge` | below |
+| **sdem-security** (this package, 0.2.1) | layer S and its record and link types; the security standard (SEC-S01a…S06b) and its own checks (SEC-S07, SEC-S08, SEC-LAYER); the NIST SP 800-53 catalogue; the commands `catalogue`, `coverage`, `threats`, `review`, `document`, `propose`, `remove`, `restore`, `purge` | below |
 | **SDEM** 0.19.0 | metamodel extensions: a layer across the stack (LR-11), `ext:` packs, switching one off (`sdem profile exclude`, MX-16), exceptions to an extension's own checks (MX-17), the security layer's document (`sdem document --layer S`) | `pip install "git+https://github.com/taumoeps/bian-sdem-framework@v0.19.0"` |
 | **sdem-desnre** 0.8.0 (the DESNRE publisher) | publishes the design with its security layer and this extension's results — review, coverage, STRIDE checklist and the review document — with no local folder paths | `pip install "git+https://github.com/taumoeps/sdem-extensions#subdirectory=publishers/desnre"` |
 | **The DESNRE site and its AI agent** | the 3D *Security* view (S1–S5; controls and threats in red); the Security tab (tiles per S-layer, records, figures, Document Output with the layer document and the review); security in Health, Metamodel, Connections and Document Output; the agent's `security_review` tool, and a 9.7 *Security architecture* section (with threats in 5 and SDEM's findings in 10) in the design document it writes | live at desnre.vercel.app — nothing to install; it shows security for a design published with sdem-security and desnre 0.8.0 installed |
@@ -77,6 +77,13 @@ SEC-LAYER) — a person can grant an exception to any of them (`sdem exception g
 stops a design's work.
 
 A worked, made-up example for SDEM's `payment-initiation-v3`: [`examples/payment-initiation-v3/`](examples/payment-initiation-v3/).
+
+## What "protected" means
+
+A record is **protected** when a control that can act — not retired, deprecated or marked `not_applicable` — PROTECTS it; a field
+(`A3.DataAttribute`) also when its data entity is. That is what `coverage`, `review`, the review document and the AI agent count. The
+DESNRE Security tab's tiles also show what a control protects **through what holds it** (e.g. a service domain's records) — as its own,
+labelled figure. A type another extension adds inside a layer (e.g. a firewall extending `A4.Node`) counts as that SDEM type.
 
 ## The whole life — on this machine, in the workspace, on DESNRE
 

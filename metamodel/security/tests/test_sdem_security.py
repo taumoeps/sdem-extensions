@@ -97,6 +97,20 @@ class SecurityTests(unittest.TestCase):
         self.assertTrue(all(f.get('computed') or (f.get('standard') or {}).get('id') == 'SEC' for f in d['findings']))
         self.assertIn('SEC-LAYER', {f['rule'] for f in d['findings']})   # the made-up design has controls only in S3
 
+    def test_the_standards_rules_fire(self):  # the audit's test gap: each rule shown firing, not only present (active records: a planned one is unresolved, LC-04)
+        ws = self.tmp / 'fire'; shutil.copytree(self.ws, ws)
+        more = {'layer': 'S', 'reason': 'made-up records that break two rules', 'changes': [
+            {'op': 'add', 'record': {'id': 'SEC-DONE', 'type': 'SEC.S.SecurityControl', 'version': '1', 'name': 'Implemented, no evidence', 'lifecycle_status': 'active',
+                                     'attributes': {'security_layer': 'S4', 'control_id': 'AC-3', 'csf_function': 'PR', 'control_kind': 'preventive', 'implementation_status': 'implemented'}}},
+            {'op': 'add', 'record': {'id': 'THR-LIKELY', 'type': 'SEC.S.Threat', 'version': '1', 'name': 'Likely, unmitigated', 'lifecycle_status': 'active',
+                                     'attributes': {'security_layer': 'S4', 'stride': ['S'], 'likelihood': 'high', 'impact': 'low'}}}], 'relationships': {'add': []}}
+        (self.tmp / 'more.json').write_text(json.dumps(more))
+        run('security', 'propose', self.tmp / 'more.json', '--workspace', ws, '--person', 'steven')
+        found = {(f['rule'], f['record']): f['outcome'] for f in run('security', 'review', '--workspace', ws, '--json')['findings']}
+        self.assertEqual(found.get(('SEC-S05a', 'SEC-DONE')), 'non_compliant')    # implemented with no evidence
+        self.assertEqual(found.get(('SEC-S05b', 'SEC-DONE')), 'non_compliant')    # implemented with nothing enforcing it
+        self.assertEqual(found.get(('SEC-S06b', 'THR-LIKELY')), 'non_compliant')  # high likelihood, nothing mitigates it
+
     @unittest.skipUnless(HAS_MX16, 'needs SDEM 0.19.0 as tagged on 2026-11-19 or later (MX-16, MX-17)')
     def test_a_person_may_grant_an_exception_to_a_computed_rule(self):  # MX-17, AUD-02
         out = run('exception', 'grant', '--workspace', self.ws, '--rule', 'SEC-S08', '--records', 'CMP-PAY-CAPTURE', '--expires', '2099-12-31',

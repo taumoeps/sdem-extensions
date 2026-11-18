@@ -1,7 +1,7 @@
 {
   "name": "security",
   "command": "sdem-security",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "The security architecture: controls, threats and trust boundaries in S1–S5 across A1–A4, on NIST SP 800-53 Rev. 5 and CSF 2.0",
   "kind": [
     "metamodel",
@@ -51,5 +51,48 @@
       "S"
     ],
     "note": "vertical: a layer beside A1–A4 whose links reach every layer (LR-11). A horizontal extension would say {\"within\": [\"A4\"]}."
-  }
+  },
+  "builds_on": {
+    "types": [
+      "A1.BusinessProcess",
+      "A1.BusinessObject",
+      "A1.BusinessActor",
+      "A1.BusinessRole",
+      "A2.ServiceDomain",
+      "A2.ControlRecord",
+      "A2.BusinessObject",
+      "A3.DataEntity",
+      "A3.DataAttribute",
+      "A3.ApplicationComponent",
+      "A3.ApplicationInterface",
+      "A3.APIOperation",
+      "A4.Node",
+      "A4.NetworkZone",
+      "A4.Path",
+      "A4.SystemSoftware",
+      "A4.Deployment",
+      "A4.InfrastructureComponent",
+      "A4.CommunicationNetwork"
+    ],
+    "attributes": [
+      "personal_information",
+      "access_classification",
+      "internet_facing",
+      "security_scheme",
+      "encrypted",
+      "protocol",
+      "zone_kind",
+      "lifecycle_status"
+    ],
+    "link_kinds": [
+      "access",
+      "composition"
+    ],
+    "requirements": [
+      "category: security"
+    ],
+    "note": "MX-41, MX-11b: what this extension names in SDEM — an upgrade that renames or removes one of these must be checked against it first."
+  },
+  "enhances": {},
+  "protected_means": "a record is protected when a control that can act (not retired, deprecated or not_applicable) PROTECTS it; a field (A3.DataAttribute) also when its data entity is (MX-25). The DESNRE tiles also count what a control protects through what holds it, and say so."
 }

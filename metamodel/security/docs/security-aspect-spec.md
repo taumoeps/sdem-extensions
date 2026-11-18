@@ -152,7 +152,7 @@ Threats: spoofing of the third party (S, IFC-PAYMENT-INITIATION), a payment alte
 
 ## 10. Where it lives
 
-`sdem-extensions/security/`: the manifest (`kind: ["metamodel", "checker"]`), `aspect.json` (types, links, rules, `builds_on`), the standard, the commands, the catalogue reference (§11, SX-D3), the example data and tests (EXT-14), against SDEM's examples for every version it claims (EXT-04, MX-11b).
+`sdem-extensions/metamodel/security/`: the manifest (`kind: ["metamodel", "checker"]`), `aspect.json` (types, links, rules, `builds_on`), the standard, the commands, the catalogue reference (§11, SX-D3), the example data and tests (EXT-14), against SDEM's examples for every version it claims (EXT-04, MX-11b).
 
 ## 11. Decisions for the owner
 

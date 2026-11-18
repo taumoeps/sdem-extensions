@@ -4,22 +4,30 @@ Extensions for [SDEM](https://github.com/taumoeps/bian-sdem-framework), each its
 
 | Extension | Does | Install |
 |---|---|---|
-| [**desnre**](desnre/) | puts a made-up SDEM workspace on your own page of the DESNRE site, as a 3D view — sign up at desnre.vercel.app/account, then `sdem desnre login`, `create`, `publish` | `pip install "git+https://github.com/taumoeps/sdem-extensions#subdirectory=desnre"` |
-| [**security**](security/) | a **metamodel extension**: adds the security architecture — controls, threats and trust boundaries in S1–S5 across A1–A4, on NIST SP 800-53 Rev. 5 and CSF 2.0 — switched on per workspace (`sdem profile include ext:security`) | `pip install "git+https://github.com/taumoeps/sdem-extensions#subdirectory=security"` |
+| [**desnre**](publishers/desnre/) | puts a made-up SDEM workspace on your own page of the DESNRE site, as a 3D view — sign up at desnre.vercel.app/account, then `sdem desnre login`, `create`, `publish` | `pip install "git+https://github.com/taumoeps/sdem-extensions#subdirectory=publishers/desnre"` |
+| [**security**](metamodel/security/) | a **metamodel extension**: adds the security architecture — controls, threats and trust boundaries in S1–S5 across A1–A4, on NIST SP 800-53 Rev. 5 and CSF 2.0 — switched on per workspace (`sdem profile include ext:security`) | `pip install "git+https://github.com/taumoeps/sdem-extensions#subdirectory=metamodel/security"` |
 
-Start a new one from [**template/**](template/).
+**How the repository is laid out** — by what an extension does to SDEM (its manifest's `kind`):
+
+| Folder | Kind | What it is |
+|---|---|---|
+| `publishers/` | publisher | sends a design somewhere — `desnre` |
+| `metamodel/` | metamodel | adds to SDEM's metamodel. Its manifest's `scope` says how: **vertical**, a layer across A1–A4 (`"scope": {"across": ["S"]}` — `security`), or **horizontal**, more record types inside one layer (`"scope": {"within": ["A4"]}` — e.g. a network extension, planned). Tools read the scope; the folder does not split them |
+| `templates/` | — | starting points for a new extension |
+
+Start a new one from [**template/**](templates/publisher/).
 
 ## Install and use
 
 Into the **same environment as SDEM** (for SDEM's own checkout, its `.venv`):
 
 ```
-pip install "git+https://github.com/taumoeps/sdem-extensions#subdirectory=desnre"
+pip install "git+https://github.com/taumoeps/sdem-extensions#subdirectory=publishers/desnre"
 sdem extensions                 # lists what is installed, what each reads and where it sends data
 sdem desnre --help
 ```
 
-From a clone, `pip install -e sdem-extensions/desnre` — changes in the clone take effect at once.
+From a clone, `pip install -e sdem-extensions/publishers/desnre` — changes in the clone take effect at once.
 
 ## The rules every extension here follows
 

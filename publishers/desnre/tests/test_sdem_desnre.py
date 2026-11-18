@@ -12,7 +12,7 @@ sys.path.insert(0, str(HERE)); sys.path.insert(0, str(HERE / 'tests'))
 import sdem_desnre as X   # noqa: E402
 from fake_site import Site   # noqa: E402
 
-SDEM = Path(os.environ.get('SDEM_HOME', HERE.parents[1] / 'bian-sdem-framework'))
+SDEM = Path(os.environ.get('SDEM_HOME') or next((d / 'bian-sdem-framework' for d in HERE.parents if (d / 'bian-sdem-framework').is_dir()), HERE.parents[2] / 'bian-sdem-framework'))   # an SDEM checkout beside this repository, however deep the extension sits
 EXAMPLE = SDEM / 'examples' / 'payment-initiation'
 
 

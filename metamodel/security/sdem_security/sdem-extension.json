@@ -45,5 +45,11 @@
     ],
     "publisher": "sdem-desnre>=0.8.0",
     "note": "EL-01: what this extension offers a viewer. The DESNRE site decides which of it it shows (its extension registry, EL-02)."
+  },
+  "scope": {
+    "across": [
+      "S"
+    ],
+    "note": "vertical: a layer beside A1–A4 whose links reach every layer (LR-11). A horizontal extension would say {\"within\": [\"A4\"]}."
   }
 }

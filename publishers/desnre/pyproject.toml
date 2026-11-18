@@ -12,7 +12,7 @@ readme = "README.md"
 dependencies = []
 
 [project.urls]
-Homepage = "https://github.com/taumoeps/sdem-extensions/tree/main/desnre"
+Homepage = "https://github.com/taumoeps/sdem-extensions/tree/main/publishers/desnre"
 
 [project.scripts]
 sdem-desnre = "sdem_desnre:entry"

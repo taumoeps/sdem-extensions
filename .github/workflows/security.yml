@@ -4,9 +4,9 @@ name: security extension against SDEM
 # (SDEM_REQUIRED=1): the review's finding A, compatibility shown on a clean install, not assumed.
 on:
   push:
-    paths: ['security/**', '.github/workflows/security.yml']
+    paths: ['metamodel/security/**', '.github/workflows/security.yml']
   pull_request:
-    paths: ['security/**', '.github/workflows/security.yml']
+    paths: ['metamodel/security/**', '.github/workflows/security.yml']
   workflow_dispatch:
 
 jobs:
@@ -26,7 +26,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install "git+https://github.com/taumoeps/bian-sdem-framework@${{ matrix.sdem }}"
-          python -m pip install ./security
+          python -m pip install ./metamodel/security
           sdem --version
           sdem extensions
       - name: Switch it on in a fresh workspace and run every command
@@ -44,4 +44,4 @@ jobs:
       - name: The extension's tests (SDEM required — none skipped)
         env:
           SDEM_REQUIRED: '1'
-        run: python -m unittest discover -s security/tests -v
+        run: python -m unittest discover -s metamodel/security/tests -v

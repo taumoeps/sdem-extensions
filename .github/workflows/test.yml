@@ -21,11 +21,11 @@ jobs:
       - name: Install SDEM and the extensions
         run: |
           pip install ./bian-sdem-framework
-          pip install ./desnre ./template
+          pip install ./publishers/desnre ./templates/publisher
           sdem extensions
       - name: Tests
         env:
           SDEM_HOME: ${{ github.workspace }}/bian-sdem-framework
         run: |
-          python -m unittest discover -s desnre/tests -v
-          python -m unittest discover -s template/tests -v
+          python -m unittest discover -s publishers/desnre/tests -v
+          python -m unittest discover -s templates/publisher/tests -v

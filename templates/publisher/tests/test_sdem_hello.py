@@ -6,7 +6,7 @@ HERE = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(HERE))
 import sdem_hello as H   # noqa: E402
 
-SDEM = Path(os.environ.get('SDEM_HOME', HERE.parents[1] / 'bian-sdem-framework'))
+SDEM = Path(os.environ.get('SDEM_HOME') or next((d / 'bian-sdem-framework' for d in HERE.parents if (d / 'bian-sdem-framework').is_dir()), HERE.parents[2] / 'bian-sdem-framework'))   # an SDEM checkout beside this repository, however deep the extension sits
 EXAMPLE = SDEM / 'examples' / 'payment-initiation'
 
 

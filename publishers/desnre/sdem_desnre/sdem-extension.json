@@ -39,5 +39,5 @@
   "owner": "the sdem-extensions maintainers",
   "licence": "Apache-2.0",
   "contract": "SDEM extension contract EXT-01…EXT-15 (taumoeps/bian-sdem-framework: docs/design/sdem-extensions-spec.md)",
-  "home": "https://github.com/taumoeps/sdem-extensions/tree/main/desnre"
+  "home": "https://github.com/taumoeps/sdem-extensions/tree/main/publishers/desnre"
 }

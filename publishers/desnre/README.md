@@ -8,7 +8,7 @@ Puts a made-up SDEM workspace on **your own page** of the DESNRE site, as a 3D v
 2. **A token:** on your account page, **Create token** (it expires after 90 days unless you choose otherwise). It is shown once — copy it.
 3. **The extension,** into the same environment as SDEM:
    ```
-   pip install "git+https://github.com/taumoeps/sdem-extensions#subdirectory=desnre"
+   pip install "git+https://github.com/taumoeps/sdem-extensions#subdirectory=publishers/desnre"
    sdem extensions                 # desnre is listed
    ```
 4. **Sign in:** `sdem desnre login` and paste the token. On a Mac it is kept in your Keychain; elsewhere set it as the environment variable `DESNRE_TOKEN`.

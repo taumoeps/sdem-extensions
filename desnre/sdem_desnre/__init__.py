@@ -409,6 +409,43 @@ def carry_packs(files, profile_files):
     files['sdem-profile.json'] = {**prof, 'includes': incs}
 
 
+EXT_RESULTS = {'security': ('review', 'coverage', 'threats')}   # 0.7.8: what a metamodel extension's own commands report, published with the design
+
+
+def extension_results(ws, files):
+    """The results of each included metamodel extension's read-only commands (e.g. `sdem security review --json`), run here where the
+    extension is installed, so the site's agent can quote them without the extension. An extension not installed, or a command that
+    fails, is left out — the design still publishes. The workspace's local path is never sent."""
+    out = {}
+    incl = [i[4:] for i in ((files.get('sdem-profile.json') or {}).get('includes') or []) if isinstance(i, str) and i.startswith('ext:')]
+    for name in incl:
+        for cmd in EXT_RESULTS.get(name, ()):
+            r = run_sdem(ws, [name, cmd, '--workspace', str(ws), '--json'])
+            try: d = json.loads(r.stdout) if r.returncode == 0 else None
+            except ValueError: d = None
+            if isinstance(d, dict):
+                d.pop('workspace', None)
+                out.setdefault(name, {})[cmd] = d
+    return out
+
+
+def no_local_paths(x, ws):
+    """0.7.8: what is published names no folder on the architect's computer — a path inside the workspace becomes relative to it,
+    any other absolute path its file name only (`profile show` and `check` report where files are)."""
+    root = Path(ws).resolve()
+    def fix(t):
+        if not isinstance(t, str) or len(t) < 2 or '\n' in t or len(t) > 1000: return t
+        try:
+            p = Path(t).expanduser()
+            if not p.is_absolute() or not (p.exists() or str(p).startswith(str(Path.home()))): return t   # an API path such as /payments is not a file here
+            q = p.resolve()
+            return q.relative_to(root).as_posix() or '.' if q == root or root in q.parents else q.name
+        except (OSError, ValueError): return Path(t).name
+    if isinstance(x, dict): return {k: no_local_paths(v, ws) for k, v in x.items()}
+    if isinstance(x, list): return [no_local_paths(v, ws) for v in x]
+    return fix(x)
+
+
 def workspace_bundle(ws, v, mm):
     """DW-40: what the workbench shows — the workspace's own files, and what SDEM says about them: the check report, each layer's
     document, the kinds of record each layer allows (with the profile's), and how each layer is drawn. All through SDEM's commands."""
@@ -441,12 +478,14 @@ def workspace_bundle(ws, v, mm):
     for L in added:   # 0.7.7: an added layer's document and kinds of record too — the workbench's Document Output and Metamodel for e.g. Security
         r = run_sdem(ws, ['document', '--workspace', str(ws), '--layer', L])
         if r.returncode == 0: docs[L] = r.stdout
+    ext = extension_results(ws, files)
     carry_packs(files, profile_files)
     return {
-        'sdem': v, 'metamodel': mm, 'files': files, 'profile': profile, 'profile_files': profile_files,
-        'check': js(['check', '--workspace', str(ws), '--json']),
+        'extensions': no_local_paths(ext, ws),
+        'sdem': v, 'metamodel': mm, 'files': files, 'profile': no_local_paths(profile, ws), 'profile_files': profile_files,
+        'check': no_local_paths(js(['check', '--workspace', str(ws), '--json']), ws),
         'documents': docs,
-        'status': health(js(['status', '--workspace', str(ws), '--json'])),
+        'status': no_local_paths(health(js(['status', '--workspace', str(ws), '--json'])), ws),
         'types': {L: (js(['types', L, '--workspace', str(ws), '--json']) or {}).get('types', []) for L in LAYERS + tuple(added)},
         'layouts': {L: js(['layout', '--layer', L, '--workspace', str(ws), '--json']) for L in LAYERS},
     }

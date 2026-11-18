@@ -6,7 +6,7 @@ A3 (application) and A4 — without changing A1–A4. Install it, switch it on i
 
 Built on public sources only: **NIST SP 800-53 Rev. 5** controls (the catalogue ids, titles and families ship in
 `sdem_security/catalogue.json`, from NIST's OSCAL file — public domain), **NIST CSF 2.0** functions and categories (ids only),
-**STRIDE** threat categories and **NIST SP 800-207** (Zero Trust) for trust boundaries. Spec: [`docs/security-aspect-spec.md`](docs/security-aspect-spec.md).
+**STRIDE** threat categories and **NIST SP 800-207** (Zero Trust) for trust boundaries. Spec: [`docs/security-aspect-spec.md`](docs/security-aspect-spec.md). Audit for review: [`docs/audit-2026-11-19.md`](docs/audit-2026-11-19.md) — 23 findings, not yet fixed.
 
 ## Install and switch on
 

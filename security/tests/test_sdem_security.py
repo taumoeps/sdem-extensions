@@ -8,6 +8,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import sdem_security as S  # noqa: E402
 
 SDEM = shutil.which('sdem', path=str(Path(sys.executable).parent)) or shutil.which('sdem')
+import os
+REQUIRED = os.environ.get('SDEM_REQUIRED') == '1'   # in CI: SDEM is installed, so these tests run — never skipped
+if REQUIRED and not SDEM: raise SystemExit('SDEM_REQUIRED=1 but no sdem in this environment')
 DESIGN = {'layer': 'S', 'reason': 'a made-up security design', 'changes': [
     {'op': 'add', 'record': {'id': 'SEC-SC28', 'type': 'SEC.S.SecurityControl', 'version': '1', 'name': 'Protection at rest', 'lifecycle_status': 'planned',
                              'attributes': {'security_layer': 'S3', 'control_id': 'SC-28', 'csf_function': 'PR', 'control_kind': 'preventive', 'implementation_status': 'planned'}}},
@@ -22,7 +25,7 @@ def run(*args, ok=(0,)):
     return json.loads(r.stdout) if r.stdout.strip().startswith('{') else r.stdout + r.stderr
 
 
-@unittest.skipUnless(SDEM, 'SDEM is not installed in this environment')
+@unittest.skipUnless(SDEM or REQUIRED, 'SDEM is not installed in this environment')
 class SecurityTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -60,6 +63,24 @@ class SecurityTests(unittest.TestCase):
         d = run('security', 'threats', '--workspace', self.ws, '--json')
         ent = next(x for x in d['items'] if x['id'] == 'ENT-PAY-INSTR')
         self.assertEqual(ent['stated'], ['I']); self.assertNotIn('I', ent['not_yet_considered'])
+
+    def test_the_standard_checks_protocol_and_likelihood_too(self):  # SEC-S03b, SEC-S06b
+        ids = {r['id'] for r in json.loads((Path(S.__file__).parent / 'security-standard.json').read_text())['rules']}
+        self.assertTrue({'SEC-S03a', 'SEC-S03b', 'SEC-S06a', 'SEC-S06b'} <= ids)
+
+    def test_a_security_requirement_no_control_meets_is_found(self):  # SEC-S07
+        f = self.ws / 'requirements.json'; before = f.read_text()
+        d = json.loads(before); d['requirements'].append({'id': 'REQ-SEC-01', 'version': 1, 'status': 'proposed', 'name': 'Payment data is protected at rest',
+            'statement': 'Payment instructions are encrypted at rest.', 'owner_layer': 'A3', 'category': 'security', 'scope': 'record', 'subject': 'ENT-PAY-INSTR'})
+        f.write_text(json.dumps(d))
+        try:
+            found = [x for x in S.computed_findings(self.ws) if x['rule'] == 'SEC-S07']
+            self.assertEqual([x['record'] for x in found], ['REQ-SEC-01'])
+        finally: f.write_text(before)
+
+    def test_a_component_on_personal_data_without_audit_is_found(self):  # SEC-S08
+        found = sorted(x['record'] for x in S.computed_findings(self.ws) if x['rule'] == 'SEC-S08')
+        self.assertEqual(found, ['CMP-PAY-CAPTURE', 'CMP-PAY-EXEC', 'CMP-PAY-VALIDATE'])   # all three read the payment instruction; none is audited
 
     def test_review_runs_the_security_standard(self):  # MX-14
         d = run('security', 'review', '--workspace', self.ws, '--json')

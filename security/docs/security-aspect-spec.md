@@ -82,7 +82,23 @@ Links into A1–A4 are proposed and approved like SDEM's own (`sdem link`, `sdem
 
 A value not given is `unresolved`, never compliant (PR-11a, PR-20) — e.g. the example's two paths whose `encrypted` is not given.
 
-**As built: every rule is a warning.** Switching security on in an existing design must not stop its work: with errors, `sdem check` (and so `sdem connect`, which refuses a change that leaves the check failing) would fail before the first control could be added. `sdem comply` and `sdem security review` report every finding; an organisation that wants them to block adds its own rules at `error` in its profile.
+**As built (0.1.1, 2026-11-19 — after an external review found the first build short of this table):**
+
+| Check | Where it runs | What it checks |
+|---|---|---|
+| SEC-S01a, SEC-S01b | the standard (`sdem comply`, `sdem check`) | personal data classified `confidential` or `restricted`; protected by at least one control |
+| SEC-S01 (SC-28 specifically) | `sdem security review` | personal data with no SC-28 control — SDEM's cross-layer rules check *every* linked record, so "one of them is SC-28" cannot be a rule |
+| SEC-S02 | the standard | an `internet_facing` interface has `oauth2`, `openIdConnect` or `mutualTLS` |
+| SEC-S03a, SEC-S03b | the standard | a path is `encrypted: true` (a); it names its `protocol` (b) |
+| SEC-S04 | the standard | a DMZ is bounded by a trust boundary |
+| SEC-S05a, SEC-S05b | the standard | an implemented control has `control_evidence`; an implemented or partial one has an ENFORCED_BY |
+| SEC-S06a, SEC-S06b | the standard | a high-**impact** threat (a) or a high-**likelihood** threat (b) has a mitigating control |
+| SEC-S07 | `sdem security review` | every `security` requirement in `requirements.json` is met by a control (`meets_requirements`) — the registry is not a record SDEM rules can follow |
+| SEC-S08 | `sdem security review` | every component that accesses personal data is PROTECTED by an AU-2 or AU-12 control — a two-step path SDEM rules cannot express |
+
+Not yet: the evidence in `control_evidence` is a reference only — nothing checks its content, age or result (the review's finding D); approval-time rules that block are not shipped (finding C). Both are next (P1).
+
+**Every rule is a warning.** Switching security on in an existing design must not stop its work: with errors, `sdem check` (and so `sdem connect`, which refuses a change that leaves the check failing) would fail before the first control could be added. `sdem comply` and `sdem security review` report every finding; an organisation that wants them to block adds its own rules at `error` in its profile.
 
 ## 7. Commands (`sdem security …`, through EXT-15)
 

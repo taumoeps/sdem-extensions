@@ -4,9 +4,10 @@
  "standard": {
   "id": "SEC",
   "title": "Security architecture standard (sdem-security)",
-  "version": "1",
+  "version": "2",
   "owner": "sdem-security maintainers",
-  "source": "NIST SP 800-53 Rev. 5 and CSF 2.0 (public domain); security/docs/security-aspect-spec.md \u00a76"
+  "source": "NIST SP 800-53 Rev. 5 and CSF 2.0 (public domain); security/docs/security-aspect-spec.md \u00a76",
+  "note": "SEC-S07 (security requirements met by a control) and SEC-S08 (audit control on components that access personal data) follow paths SDEM rules cannot express; sdem security review checks them."
  },
  "rules": [
   {
@@ -59,7 +60,7 @@
    "severity": "warning"
   },
   {
-   "id": "SEC-S03",
+   "id": "SEC-S03a",
    "entity": "A4.Path",
    "check": {
     "attribute": "encrypted",
@@ -68,6 +69,15 @@
    },
    "message": "a communication path is encrypted (SC-8, PR.DS)",
    "severity": "warning"
+  },
+  {
+   "id": "SEC-S03b",
+   "entity": "A4.Path",
+   "require": [
+    "protocol"
+   ],
+   "severity": "warning",
+   "message": "a communication path names its protocol (SC-8, PR.DS)"
   },
   {
    "id": "SEC-S04",
@@ -113,7 +123,7 @@
    "severity": "warning"
   },
   {
-   "id": "SEC-S06",
+   "id": "SEC-S06a",
    "entity": "SEC.S.Threat",
    "when": {
     "impact": "high"
@@ -125,6 +135,20 @@
    },
    "message": "a high-impact threat is mitigated by a control \u2014 or accepted under a person's exception (RA-3, RA-7, ID.RA)",
    "severity": "warning"
+  },
+  {
+   "id": "SEC-S06b",
+   "entity": "SEC.S.Threat",
+   "when": {
+    "likelihood": "high"
+   },
+   "link": {
+    "kind": "mitigates",
+    "direction": "in",
+    "min": 1
+   },
+   "severity": "warning",
+   "message": "a high-likelihood threat is mitigated by a control \u2014 or accepted under a person's exception (RA-3, RA-7, ID.RA)"
   }
  ]
 }

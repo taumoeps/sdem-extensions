@@ -136,11 +136,32 @@ def cmd_threats(a):
     return 0
 
 
+def computed_findings(ws):
+    """SEC-S07 and SEC-S08 (security-aspect-spec §6): checks along paths SDEM's rule language cannot express — the requirements
+    registry, and a component's access to personal data. Reported with the standard's own findings, in the same shape."""
+    recs, layer_of, rels, maps = workspace(ws)
+    out, attrs = [], lambda i: (recs.get(i) or {}).get('attributes') or {}
+    met = set()
+    for r in recs.values():
+        if r['type'].endswith('.SecurityControl'): met.update(attrs(r['id']).get('meets_requirements') or [])
+    for q in ((_j(Path(ws) / 'requirements.json') or {}).get('requirements') or []):   # SEC-S07
+        if q.get('category') == 'security' and q.get('status') != 'retired' and q.get('id') not in met:
+            out.append({'rule': 'SEC-S07', 'record': q.get('id'), 'outcome': 'non_compliant', 'message': 'a security requirement that no control meets (meets_requirements) — PL-8, GV.PO'})
+    pii = {i for i, r in recs.items() if r['type'] == 'A3.DataEntity' and attrs(i).get('personal_information') is True}
+    users = sorted({l['source'] for l in rels if l.get('kind') == 'access' and l.get('target') in pii and (recs.get(l['source']) or {}).get('type') == 'A3.ApplicationComponent'})
+    for c in users:   # SEC-S08
+        audited = any(m['relationship'] == 'PROTECTS' and m['target']['id'] == c and re.match(r'AU-(2|12)\b', str(attrs(m['source']['id']).get('control_id') or '')) for m in maps)
+        if not audited:
+            out.append({'rule': 'SEC-S08', 'record': c, 'outcome': 'non_compliant', 'message': 'a component that accesses personal data has no audit control (AU-2 or AU-12) protecting it — DE.CM'})
+    return out
+
+
 def cmd_review(a):
     r = sdem('comply', '--workspace', a.workspace, '--json')
     try: comply = json.loads(r.stdout)
     except ValueError: print(r.stdout + r.stderr, file=sys.stderr); return 2
     findings = [f for f in (comply.get('findings') or comply.get('items') or []) if str(f.get('rule', '')).startswith('SEC-') and f.get('outcome') in ('non_compliant', 'unresolved')]
+    findings += computed_findings(a.workspace)   # SEC-S07, SEC-S08
     rows = coverage_rows(a.workspace)
     unprotected = [x for x in rows if not x['protected'] and (x['personal_information'] or x['type'] in ('A3.ApplicationInterface', 'A4.Path', 'A4.NetworkZone'))]
     no_rest = [x for x in rows if x['personal_information'] and x['protected'] and not any(str(c['control_id'] or '').startswith('SC-28') for c in x['controls'])]   # SEC-S01: at rest, specifically

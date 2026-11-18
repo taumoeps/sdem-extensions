@@ -437,13 +437,17 @@ def workspace_bundle(ws, v, mm):
     for l in ((profile or {}).get('layers') or []):   # a profile's own layers — e.g. the security architecture's security.json (MX, LR-11)
         p = Path(ws) / l.get('file', '')
         if l.get('file') and p.is_file() and l['file'] not in files: files[l['file']] = json.loads(p.read_text(encoding='utf-8'))
+    added = [l['code'] for l in ((profile or {}).get('layers') or []) if l.get('code') and l['code'] not in LAYERS]
+    for L in added:   # 0.7.7: an added layer's document and kinds of record too — the workbench's Document Output and Metamodel for e.g. Security
+        r = run_sdem(ws, ['document', '--workspace', str(ws), '--layer', L])
+        if r.returncode == 0: docs[L] = r.stdout
     carry_packs(files, profile_files)
     return {
         'sdem': v, 'metamodel': mm, 'files': files, 'profile': profile, 'profile_files': profile_files,
         'check': js(['check', '--workspace', str(ws), '--json']),
         'documents': docs,
         'status': health(js(['status', '--workspace', str(ws), '--json'])),
-        'types': {L: (js(['types', L, '--workspace', str(ws), '--json']) or {}).get('types', []) for L in LAYERS},
+        'types': {L: (js(['types', L, '--workspace', str(ws), '--json']) or {}).get('types', []) for L in LAYERS + tuple(added)},
         'layouts': {L: js(['layout', '--layer', L, '--workspace', str(ws), '--json']) for L in LAYERS},
     }
 

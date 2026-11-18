@@ -1,0 +1,87 @@
+[
+ {
+  "source": "SEC-POI-AC3",
+  "relationship": "PROTECTS",
+  "target": "SD-PAYMENT-ORDER-INITIATION"
+ },
+ {
+  "source": "SEC-POI-AC3",
+  "relationship": "ENFORCED_BY",
+  "target": "APP-PAYHUB"
+ },
+ {
+  "source": "SEC-POI-SI7",
+  "relationship": "PROTECTS",
+  "target": "CR-PAYMENT-ORDER-INITIATION"
+ },
+ {
+  "source": "SEC-POI-SI7",
+  "relationship": "ENFORCED_BY",
+  "target": "APP-PAYHUB"
+ },
+ {
+  "source": "SEC-POI-AU10",
+  "relationship": "PROTECTS",
+  "target": "SD-PAYMENT-ORDER-INITIATION"
+ },
+ {
+  "source": "SEC-POI-AU10",
+  "relationship": "ENFORCED_BY",
+  "target": "SYS-OBS"
+ },
+ {
+  "source": "SEC-PA-IA5",
+  "relationship": "PROTECTS",
+  "target": "SD-PARTY-AUTHENTICATION"
+ },
+ {
+  "source": "SEC-PA-IA5",
+  "relationship": "PROTECTS",
+  "target": "CR-PARTY-AUTHENTICATION"
+ },
+ {
+  "source": "SEC-PA-IA5",
+  "relationship": "ENFORCED_BY",
+  "target": "APP-IDENT"
+ },
+ {
+  "source": "SEC-FE-SI7",
+  "relationship": "PROTECTS",
+  "target": "CR-FRAUD-EVALUATION"
+ },
+ {
+  "source": "SEC-FE-SI7",
+  "relationship": "ENFORCED_BY",
+  "target": "APP-RISK"
+ },
+ {
+  "source": "SEC-FE-AC6",
+  "relationship": "PROTECTS",
+  "target": "SD-FRAUD-EVALUATION"
+ },
+ {
+  "source": "SEC-FE-AC6",
+  "relationship": "ENFORCED_BY",
+  "target": "APP-RISK"
+ },
+ {
+  "source": "THR-POI-UNAUTH",
+  "relationship": "THREATENS",
+  "target": "SD-PAYMENT-ORDER-INITIATION"
+ },
+ {
+  "source": "THR-POI-TAMPER",
+  "relationship": "THREATENS",
+  "target": "CR-PAYMENT-ORDER-INITIATION"
+ },
+ {
+  "source": "THR-PA-CREDS",
+  "relationship": "THREATENS",
+  "target": "SD-PARTY-AUTHENTICATION"
+ },
+ {
+  "source": "THR-FE-BYPASS",
+  "relationship": "THREATENS",
+  "target": "SD-FRAUD-EVALUATION"
+ }
+]

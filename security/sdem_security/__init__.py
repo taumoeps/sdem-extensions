@@ -153,6 +153,9 @@ def computed_findings(ws):
         audited = any(m['relationship'] == 'PROTECTS' and m['target']['id'] == c and re.match(r'AU-(2|12)\b', str(attrs(m['source']['id']).get('control_id') or '')) for m in maps)
         if not audited:
             out.append({'rule': 'SEC-S08', 'record': c, 'outcome': 'non_compliant', 'message': 'a component that accesses personal data has no audit control (AU-2 or AU-12) protecting it — DE.CM'})
+    for L in S_NAMES:   # a security layer this design leaves empty — said, not hidden
+        if not any(r['type'].endswith(('.SecurityControl', '.Threat')) and attrs(i).get('security_layer') == L for i, r in recs.items()):
+            out.append({'rule': 'SEC-LAYER', 'record': L, 'outcome': 'unresolved', 'message': f'{S_NAMES[L]} has no controls or threats in this design'})
     return out
 
 

@@ -1,0 +1,130 @@
+# The security aspect — `sdem-security` (spec)
+
+> **Status: approved (2026-11-18) — the owner approved SX-D1…SX-D6 as recommended, with S1–S5 and a Security 3D stack; being built.** The first metamodel extension
+> ([SDEM metamodel extensions spec](https://github.com/taumoeps/bian-sdem-framework/blob/main/docs/design/sdem-metamodel-extensions-spec.md), MX-01…MX-15).
+> It adds a **security architecture** in five layers, **S1–S5**, each the security view of one Architecture plate (A1, A2, A3-1, A3-2, A4) —
+> without changing A1–A4; installed, it can be removed again (MX-03, MX-10). The owner's structure, 2026-11-18. Frameworks agreed with the owner, 2026-11-18 (§2). Made-up data only in its examples.
+
+## 1. What it answers
+
+For any design: **what must be protected, against what, by which controls, enforced where, and with what evidence** — and what is not yet protected. One dataset, so the Design document, the 3D view, `sdem comply` and the agent all say the same.
+
+## 2. Frameworks — method, notation, content
+
+| Role | Framework | How it is used | Licence (checked 2026-11-18) |
+|---|---|---|---|
+| Method | **TOGAF** (security in the ADM) | where security work sits in the design document (requirements, risks, controls per layer) — referenced, not copied | The Open Group — cited only |
+| Notation | **ArchiMate** risk and security modelling | each type is drawn as an ArchiMate element (§3); SDEM already uses ArchiMate names | The Open Group — element names only |
+| Outcomes | **NIST CSF 2.0** (CSWP 29, 2024) | every control carries its CSF function — Govern, Identify, Protect, Detect, Respond, Recover — and may carry a category (e.g. `PR.AA`) | NIST publication; identifiers and short names only are shipped |
+| Controls | **NIST SP 800-53 Rev. 5**, from NIST's OSCAL catalogue | the reference catalogue a control is chosen from, by id (`IA-2`, `SC-8`, `SC-28`) | OSCAL content: *"in the public domain within the United States … we waive copyright and related rights in the work worldwide … even for commercial purposes"* ([usnistgov/oscal-content, LICENSE.md](https://github.com/usnistgov/oscal-content/blob/main/LICENSE.md)) |
+| Trust | **NIST SP 800-207** Zero Trust Architecture | trust boundaries and where policy is enforced (§3, `SEC.TrustBoundary`) | NIST publication; concepts only |
+| Threats | **STRIDE** | each threat's category: Spoofing, Tampering, Repudiation, Information disclosure, Denial of service, Elevation of privilege | a published method; category names only |
+| Optional | MITRE ATT&CK (technique ids on a threat), OWASP ASVS (an A3 level) | an attribute that cites an id; nothing shipped | cited only |
+| Not used | SABSA, ISO/IEC 27001 Annex A text, CIS Controls | may be cited by identifier in `evidence`, never reproduced | proprietary or restricted |
+
+## 3. Record types (aspect `SEC`, file `aspect-sec.json`)
+
+| Type | ArchiMate | Required attributes | Optional attributes |
+|---|---|---|---|
+| **SEC.SecurityControl** — a measure that protects something | Requirement (a control measure) | `security_layer` (S1–S5), `control_id` (an SP 800-53 id, e.g. `SC-28`, checked against the catalogue), `csf_function` (GV · ID · PR · DE · RS · RC), `control_kind` (preventive · detective · corrective), `implementation_status` (planned · partial · implemented · not_applicable) | `csf_category` (e.g. `PR.DS`), `requirements` (ids in `requirements.json` it meets), `evidence` (`kind:reference`, needed before `implemented`), `owner` |
+| **SEC.Threat** — what could go wrong to what | Assessment | `security_layer` (S1–S5), `stride` (one or more of S · T · R · I · D · E), `likelihood`, `impact` (low · medium · high) | `treatment` (mitigate · accept · transfer · avoid), `attack_ref` (ATT&CK id), `description` |
+| **SEC.TrustBoundary** — where trust changes and policy is enforced | Grouping | `boundary_kind` (network · identity · tenant · process) | `enforcement` (what enforces it, e.g. an API gateway, mTLS) |
+
+**Not new types — SDEM already holds them (used by the aspect's rules, §6):** information classification (`access_classification`, every record), personal data (`personal_information`, `retention_period` on `A3.DataEntity`), API authentication (`security_scheme` on `A3.ApplicationInterface`), network trust (`zone_kind`, `zone_level`, `internet_facing` on `A4.NetworkZone`), transport protection (`protocol`, `encrypted` on `A4.Path`), and **security requirements** (category `security` in `requirements.json`). The aspect gives `access_classification` its values: `public · internal · confidential · restricted`.
+
+## 4. Links
+
+| Link | From → to | Meaning | ArchiMate | Evidence to approve |
+|---|---|---|---|---|
+| **PROTECTS** | SecurityControl → A1 process, business object · A2 service domain · A3 data entity, component, interface, API operation · A4 node, zone, path, system software, deployment | the control protects that record | association (directed) | a design reference (`design:` or `document:`) |
+| **ENFORCED_BY** | SecurityControl → A3 component, interface · A4 node, system software, deployment | the record carries the control out (IA-2 by Identity; SC-12 by key custody) | realization (record realises the control) | a design reference; for `implemented`, an implementation reference (`config:`, `test:`) |
+| **THREATENS** | Threat → any A1–A4 record | the threat applies to that record | influence (negative) | a design reference or a threat-model session (`review:`) |
+| **MITIGATES** | SecurityControl → Threat (inside the aspect) | the control reduces the threat | influence (positive) | — (inside the aspect) |
+| **BOUNDS** | TrustBoundary → A4 network zone · A3 component, interface | the records inside the boundary | aggregation | a design reference |
+
+Links into A1–A4 are proposed and approved like SDEM's own (`sdem link`, `sdem approve`), by a person (CTL-21). No inference in the first version (MX-D4): every record and link comes from a person or a source.
+
+## 5. The five security layers (the owner's structure, 2026-11-18)
+
+| Layer | Security view of | Holds |
+|---|---|---|
+| **S1 Business Security Architecture** | A1 | business risks, information classification, roles and separation of duties, consent and authorisation rules, security requirements |
+| **S2 Service Domain Security Architecture** | A2 | which BIAN domains are security functions (Party Authentication, Fraud Evaluation); the protection each domain's control record and information need — stated before any application exists |
+| **S3 Data Security Architecture** | A3-1 | classification per entity and field, personal data, retention, protection at rest, who reads and writes what |
+| **S4 Application Security Architecture** | A3-2 | authentication and authorisation per interface and operation, input validation, sessions, audit events |
+| **S5 Technology Security Architecture** | A4 | zones as trust boundaries, encryption on paths, keys and secrets, hardening, logging, backup and recovery |
+
+**Every control and threat belongs to one security layer** — a required attribute `security_layer` (S1 … S5) on `SEC.SecurityControl` and `SEC.Threat`; a trust boundary is S5 (network) or S4 (identity, process, tenant). Its links still reach any layer: IA-2 sits in S4 and also **PROTECTS** the A1 process it guards — the lines down the stack are security running through the design.
+
+### Per layer — typical controls and threats
+
+| Layer | Typical controls (SP 800-53) | Typical threats (STRIDE) |
+|---|---|---|
+| A1 Business | AC-5 separation of duties (roles on processes), PM/RA risk governance, PT privacy | R — a customer denies a consent; E — a role acts beyond its duty |
+| A2 BIAN | IA-2/IA-8 on Party Authentication; SI-4 monitoring on Fraud Evaluation | S — a party impersonated; T — a payment order altered |
+| A3 Application | IA-2, AC-3, SC-8, SC-28, SI-10 input validation, AU-2/AU-12 audit events | S, T, I — on interfaces and data entities; R — no audit of an operation |
+| A4 Technology | SC-7 boundary protection, SC-8 in transit, SC-12/SC-13 keys and cryptography, AU-9, CP-9/CP-10 backup and recovery | D — the edge flooded; I — a path unencrypted; T — keys exposed |
+
+## 6. Standards (`sdem comply`) — shipped with the aspect
+
+| Rule | Check | NIST |
+|---|---|---|
+| **SEC-S01** | Every data entity with `personal_information` is `confidential` or `restricted`, and is **PROTECTED** by an SC-28 control (protection at rest) | SC-28 · PR.DS |
+| **SEC-S02** | Every interface reachable from an `internet_facing` zone has `security_scheme` `oauth2`, `openIdConnect` or `mutualTLS` | IA-2, IA-8 · PR.AA |
+| **SEC-S03** | Every path has `encrypted: true` and a `protocol` (a path crossing zones: error; inside a zone: warning) | SC-8 · PR.DS |
+| **SEC-S04** | Every `internet_facing` zone is **BOUNDED** by a trust boundary with an `enforcement` | SC-7 · PR.IR |
+| **SEC-S05** | A control `implemented` has `evidence` and at least one **ENFORCED_BY** | CA-2 · ID.IM |
+| **SEC-S06** | A threat rated high (likelihood or impact) has a **MITIGATES**, or `treatment: accept` under a person's exception (`sdem exception grant`) | RA-3, RA-7 · ID.RA |
+| **SEC-S07** | Every `security` requirement is met by at least one control (`requirements`) | PL-8 · GV.PO |
+| **SEC-S08** | A component that accesses personal data is **PROTECTED** by an audit control (AU-2 or AU-12) | AU-2, AU-12 · DE.CM |
+
+A value not given is `unresolved`, never compliant (PR-11a, PR-20) — e.g. the example's two paths whose `encrypted` is not given.
+
+## 7. Commands (`sdem security …`, through EXT-15)
+
+| Command | Does |
+|---|---|
+| `sdem security catalogue <words>` | searches the SP 800-53 catalogue (id, title, family) — as `sdem bian search` does for BIAN |
+| `sdem security coverage --workspace …` | per record in A1–A4: its classification, the controls that protect it and where they are enforced, the threats on it — and what has none |
+| `sdem security threats --workspace …` | a **STRIDE checklist** per record (the STRIDE-per-element table: an actor S·R; a process or component all six; a data entity T·R·I·D; a path T·I·D) — prompts for a person, never records |
+| `sdem security review --workspace …` | the reviewer's list, weakest first: rules not met, unresolved values, unevidenced controls, unmitigated high threats |
+| `sdem security propose <file> --workspace … --person …` | a person's controls, threats and boundaries into the aspect, **as a change set** (`--dry-run` first; EXT-07) |
+
+All read-only except `propose`; all take `--json`.
+
+## 8. The viewpoint — Security Architecture, S1–S5
+
+- **Its own 3D stack, called *Security*** — a third viewpoint on the 3D view's switch, *Architecture · Security · Metamodel*, with the same controls as the other two (focus a plate, flat 2D, connections view): five plates stacked S1 at the top to S5 at the bottom. Present only while the aspect is installed and included in the workspace; removing it removes the option.
+- **Each S-plate is its A-plate with security drawn over it:** the same view model as the [Architecture viewpoint](https://github.com/taumoeps/bian-sdem-framework/blob/main/docs/design/sdem-architecture-viewpoint-spec.md) (same shapes, same positions), the shapes coloured by `access_classification`, each layer's controls and threats placed beside what they protect or threaten, trust boundaries drawn round what they bound; unprotected records marked.
+- **Lines between plates** are the cross-layer **PROTECTS**, **ENFORCED_BY** and **THREATENS** — a control in S4 reaching down to S5 and up to S1. Choosing a control lights everything it protects and what enforces it, in every layer.
+- **2D, the Design document:** the same five figures (S1–S5, one view model for both, ARV-01/02) in a new section, *Security architecture*, with a coverage table per layer; written by the agent from this data and checked by SDEM.
+
+## 9. The example — payment-initiation-v3 (made-up)
+
+| Control | id | Protects | Enforced by |
+|---|---|---|---|
+| Customer authentication | IA-2 | PROC-AUTH, SD-PARTY-AUTHENTICATION, IFC-PAYMENT-INITIATION | APP-IDENT |
+| Third-party authentication (OAuth2) | IA-8 | IFC-PAYMENT-INITIATION | APP-EDGE |
+| Transport encryption | SC-8 | PATH-EDGE, PATH-DATA, PATH-KEY, PATH-HANDOFF | NODE-EDGE, NODE-INT |
+| Protection at rest | SC-28 | DATA-CONSENT, DATA-PAYMENT, DATA-AUDIT | SYS-DB |
+| Key management | SC-12 | DATA-CONSENT, DATA-PAYMENT | SYS-KMS |
+| Boundary protection | SC-7 | ZONE-EDGE | NODE-EDGE |
+| Input validation | SI-10 | API-PAYMENT-CREATE, API-CONSENT-CREATE | APP-PAYHUB, APP-CONSENT |
+| Audit events | AU-2, AU-12 | APP-CONSENT, APP-PAYHUB | APP-EDGE, SYS-OBS |
+
+Threats: spoofing of the third party (S, IFC-PAYMENT-INITIATION), a payment altered in flight (T, PATH-HANDOFF), consent repudiated (R, DATA-CONSENT), personal data disclosed (I, DATA-CONSENT), the edge flooded (D, ZONE-EDGE). Trust boundary: the internet edge (network, enforced by API ingress) bounding ZONE-EDGE. Written as a change set, accepted by a named person; `sdem comply` then reports what the design still lacks (the two unencrypted-or-unknown paths among them).
+
+## 10. Where it lives
+
+`sdem-extensions/security/`: the manifest (`kind: ["metamodel", "checker"]`), `aspect.json` (types, links, rules, `builds_on`), the standard, the commands, the catalogue reference (§11, SX-D3), the example data and tests (EXT-14), against SDEM's examples for every version it claims (EXT-04, MX-11b).
+
+## 11. Decisions for the owner
+
+| # | Decision | Recommendation |
+|---|---|---|
+| SX-D1 | Three types (control, threat, trust boundary); classification and requirements reuse what SDEM holds | **yes** — the smallest set that answers §1 |
+| SX-D2 | **Five security layers S1–S5**, the security views of A1, A2, A3-1, A3-2, A4; each control and threat in one (`security_layer`); a third viewpoint *Security* with five plates, each its A-plate with security drawn over it | **yes** — the owner's structure; the aspect's id stays `SEC`, and none of it is a core layer |
+| SX-D3 | The SP 800-53 catalogue: ship the control ids, titles and families (from NIST's OSCAL file, with its source and checksum) | **yes** — small, public domain, works offline; the full text is linked, not shipped |
+| SX-D4 | No inference: threats come from a person (`sdem security threats` only prompts) | **yes** — security judgement stays with a person |
+| SX-D5 | The eight standards (§6) ship as the aspect's default standard, switched on with the aspect | **yes** — a workspace may narrow them in its profile, never weaken (PR-14) |
+| SX-D6 | Build order: SDEM's core change (MX §5) → the aspect file and `sdem check` → links, trace, impact → standards and commands → the example → DESNRE's Security viewpoint (S1–S5) and document section | **yes** |

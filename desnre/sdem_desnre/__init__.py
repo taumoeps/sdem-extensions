@@ -435,6 +435,60 @@ def extension_results(ws, files):
     return out
 
 
+def _decisions(ws, kind):
+    """SDEM's recorded decisions of one kind (GV-01), oldest first."""
+    out = []
+    for f in sorted((Path(ws) / 'decisions').glob('GD-*.json')) if (Path(ws) / 'decisions').is_dir() else []:
+        try: d = json.loads(f.read_text(encoding='utf-8'))
+        except (OSError, ValueError): continue
+        if d.get('kind') == kind: out.append(d)
+    return sorted(out, key=lambda d: d.get('at') or '')
+
+
+def extension_states(ws, files, results):
+    """EL-07, EL-09, EL-16: each metamodel extension this design has used, with its state read from SDEM's own records — never inferred
+    from a missing file: `on` (included now: since when and by whom, its version, its results stamped with when they were computed),
+    or `off` (switched off: when, by whom, why, the decision and the archive). One never switched on is absent. Purges travel too, so
+    the site can remove what a person purged from its previous version and document history."""
+    incl = {i[4:] for i in ((files.get('sdem-profile.json') or {}).get('includes') or []) if isinstance(i, str) and i.startswith('ext:')}
+    on_d = {d.get('subject', '')[4:]: d for d in _decisions(ws, 'include_in_profile') + _decisions(ws, 'restore_from_archive') if str(d.get('subject', '')).startswith('ext:')}
+    off_d = {d.get('subject', '')[4:]: d for d in _decisions(ws, 'exclude_from_profile') if str(d.get('subject', '')).startswith('ext:')}
+    out, now = {}, datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0).isoformat()
+    for name in sorted(incl | set(off_d)):
+        if name in incl:
+            d, ver = on_d.get(name) or {}, None
+            try:
+                m = run_sdem(ws, [name, '--manifest']); ver = (json.loads(m.stdout) if m.returncode == 0 else {}).get('version')
+            except (subprocess.TimeoutExpired, OSError, ValueError): pass
+            out[name] = {'state': 'on', 'version': ver, 'since': (d.get('at') or '')[:10] or None, 'by': d.get('named_person'), 'decision': d.get('id'),
+                         'results': results.get(name) or {}, 'results_at': now if results.get(name) else None}
+        else:
+            d = off_d[name]; det = d.get('details') or {}
+            out[name] = {'state': 'off', 'since': (d.get('at') or '')[:10] or None, 'by': d.get('named_person'), 'reason': det.get('reason'),
+                         'decision': d.get('id'), 'archive': det.get('archive')}
+    purges = [{'extension': (d.get('subject') or '').replace('ext:', ''), 'decision': d.get('id'), 'at': (d.get('at') or '')[:10]} for d in _decisions(ws, 'purge_extension_data')]
+    return out, purges
+
+
+def extension_changes(live, new):
+    """EL-08: what a publish changes about extensions, against the live design — '+' switched on, '−' switched off, '~' results refreshed."""
+    def state(b, n):
+        e = ((b or {}).get('extensions') or {}).get(n)
+        if not isinstance(e, dict): return None
+        if 'state' in e: return e
+        return {'state': 'on', 'results': e} if e else None   # a design published before 0.8.0: results only, so on
+    lines = []
+    for n in sorted(set(((live or {}).get('extensions') or {})) | set((new or {}).get('extensions') or {})):
+        a, b = state(live, n), state(new, n)
+        if (a or {}).get('state') != 'on' and (b or {}).get('state') == 'on':
+            lines.append(f"+ {n} ({b.get('version') or 'version not known'}) — switched on" + (f" {b['since']} by {b['by']}" if b.get('since') and b.get('by') else ''))
+        elif (a or {}).get('state') == 'on' and (b or {}).get('state') != 'on':
+            lines.append(f"− {n} — switched off" + (f" {b['since']} by {b['by']}" if b and b.get('since') else '') + (f': "{b["reason"]}"' if b and b.get('reason') else '') + ' — the site will say so')
+        elif (b or {}).get('state') == 'on' and json.dumps((a or {}).get('results'), sort_keys=True) != json.dumps(b.get('results'), sort_keys=True):
+            lines.append(f"~ {n} — its results refreshed")
+    return lines
+
+
 LOCAL = re.compile(r"""(?:[A-Za-z]:[\\/]|/)[^\s"'`<>|,;)]*""")   # an absolute path, Unix or Windows, up to a space or a quote
 
 
@@ -496,10 +550,10 @@ def workspace_bundle(ws, v, mm):
     for L in added:   # 0.7.7: an added layer's document and kinds of record too — the workbench's Document Output and Metamodel for e.g. Security
         r = run_sdem(ws, ['document', '--workspace', str(ws), '--layer', L])
         if r.returncode == 0: docs[L] = r.stdout
-    ext = extension_results(ws, files)
+    ext, purges = extension_states(ws, files, no_local_paths(extension_results(ws, files), ws))   # EL-07: {name: {state, …, results}}
     carry_packs(files, profile_files)
     return {
-        'extensions': no_local_paths(ext, ws),
+        'extensions': ext, 'extension_purges': purges,
         'sdem': v, 'metamodel': mm, 'files': files, 'profile': no_local_paths(profile, ws), 'profile_files': profile_files,
         'check': no_local_paths(js(['check', '--workspace', str(ws), '--json']), ws),
         'documents': docs,
@@ -715,6 +769,14 @@ def cmd_create(a):
         print(f'written: {out}')
         if a.dry_run:
             print('dry run: nothing sent'); return
+    try: live = call('GET', target.path(name) + '/workspace', target.send_tok, None, a.site)   # EL-08: what changes about extensions, against what is live
+    except PublishError: live = None
+    changes = extension_changes(live, model.get('workspace'))
+    if changes:
+        print('extensions — against what is live:\n  ' + '\n  '.join(changes))
+        if not a.yes:
+            if not sys.stdin.isatty(): raise PublishError('this publish changes the design\'s extensions (above) — confirm with --yes')
+            if input('send it? [y/N] ').strip().lower() not in ('y', 'yes'): print('nothing sent'); return
     r = call('POST', target.path(name), target.send_tok, text, a.site)
     remember_name(ws, name)
     print(f"sent:    a draft — not public\npreview: {r.get('preview')}")

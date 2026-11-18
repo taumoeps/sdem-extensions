@@ -111,6 +111,11 @@ class SecurityTests(unittest.TestCase):
         self.assertTrue((ws / d['archive']).exists())
         self.assertTrue(run('check', '--workspace', ws, '--require-recorded', '--json')['ok'])
         self.assertNotIn('ext:security', json.loads((ws / 'sdem-profile.json').read_text())['includes'])
+        back = run('security', 'restore', '--archive', d['archive'], '--workspace', ws, '--person', 'steven', '--reason', 'back on', '--json')   # EL-06
+        self.assertTrue((ws / 'security.json').exists()); self.assertEqual(sorted(back['connections']), sorted(d['connections_retired']))
+        run('security', 'remove', '--workspace', ws, '--person', 'steven', '--reason', 'off again')
+        dry = run('security', 'purge', '--workspace', ws, '--person', 'steven', '--reason', 'a data request', '--dry-run', '--json')   # EL-16
+        self.assertEqual(len(dry['purged']), 2); self.assertTrue(dry['not_reached'])
 
 
 if __name__ == '__main__':

@@ -1,7 +1,7 @@
 {
   "name": "security",
   "command": "sdem-security",
-  "version": "0.1.3",
+  "version": "0.2.0",
   "description": "The security architecture: controls, threats and trust boundaries in S1–S5 across A1–A4, on NIST SP 800-53 Rev. 5 and CSF 2.0",
   "kind": [
     "metamodel",
@@ -14,6 +14,8 @@
     "comply --json",
     "change propose",
     "profile exclude",
+    "profile restore",
+    "profile purge",
     "exception (read: exceptions.json)"
   ],
   "reads": [
@@ -24,5 +26,24 @@
   "data": "any",
   "owner": "the sdem-extensions maintainers",
   "licence": "Apache-2.0; the NIST catalogue extract is public domain (catalogue.json, source)",
-  "contract": "SDEM extension contract EXT-01…EXT-15 and metamodel extensions MX-01…MX-15 (taumoeps/bian-sdem-framework)"
+  "contract": "SDEM extension contract EXT-01…EXT-15 and metamodel extensions MX-01…MX-15 (taumoeps/bian-sdem-framework)",
+  "viewer": {
+    "layer": "S",
+    "file": "security.json",
+    "sublayers": {
+      "S1": "Business security",
+      "S2": "Service domain security",
+      "S3": "Data security",
+      "S4": "Application security",
+      "S5": "Technology security"
+    },
+    "results": [
+      "review",
+      "coverage",
+      "threats",
+      "document"
+    ],
+    "publisher": "sdem-desnre>=0.8.0",
+    "note": "EL-01: what this extension offers a viewer. The DESNRE site decides which of it it shows (its extension registry, EL-02)."
+  }
 }

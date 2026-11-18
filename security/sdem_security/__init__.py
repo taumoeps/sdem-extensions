@@ -6,6 +6,8 @@
     sdem security review   --workspace DIR                  what the security design still lacks, weakest first
     sdem security document --workspace DIR [-o FILE]        the review as a readable document (Markdown)
     sdem security remove  --workspace DIR --person P --reason R   switch security off again — archived, not lost (a person's decision)
+    sdem security restore --archive F --workspace DIR --person P --reason R   switch it back on from that archive
+    sdem security purge   --workspace DIR --person P --reason R [--archive F]   delete the archived data — never the default
     sdem security propose FILE --workspace DIR --person P   controls, threats and boundaries as a change set (a person accepts)
 
 Switch it on in a workspace first — a person's decision: sdem profile include ext:security --workspace DIR --person P, then
@@ -337,6 +339,28 @@ def cmd_remove(a):
     if sdem('profile', 'exclude', '--help').returncode != 0:
         print('sdem security remove: this SDEM cannot switch an extension off (sdem profile exclude, MX-16) — reinstall SDEM 0.19.0 from its tag (2026-11-19 or later)', file=sys.stderr); return 2
     args = ['profile', 'exclude', 'ext:security', '--workspace', a.workspace, '--person', a.person, '--reason', a.reason] + (['--dry-run'] if a.dry_run else []) + (['--json'] if a.json else [])
+    r = sdem(*args); sys.stdout.write(r.stdout); sys.stderr.write(r.stderr)
+    if r.returncode == 0 and not a.json: print('The DESNRE site still shows Security for this design until you publish it again; then it shows that Security was switched off, when and by whom (EL-05): sdem desnre create <name> && sdem desnre publish <name>')
+    return r.returncode
+
+
+def cmd_restore(a):
+    """EL-06: switch security back on from an archive `remove` wrote — its layer, its connections with their old ids, its exceptions."""
+    if sdem('profile', 'restore', '--help').returncode != 0:
+        print('sdem security restore: this SDEM cannot restore from an archive (sdem profile restore, EL-06) — reinstall SDEM 0.19.0 from its tag', file=sys.stderr); return 2
+    args = ['profile', 'restore', '--archive', a.archive, '--workspace', a.workspace, '--person', a.person, '--reason', a.reason] + (['--skip-unfit'] if a.skip_unfit else []) \
+           + (['--dry-run'] if a.dry_run else []) + (['--json'] if a.json else [])
+    r = sdem(*args); sys.stdout.write(r.stdout); sys.stderr.write(r.stderr)
+    if r.returncode == 0 and not a.json: print('The DESNRE site shows Security for this design again after you publish it (EL-04): sdem desnre create <name> && sdem desnre publish <name>')
+    return r.returncode
+
+
+def cmd_purge(a):
+    """EL-16: delete security's archived data when a person decides to — never part of remove. The link ids stay retired."""
+    if sdem('profile', 'purge', '--help').returncode != 0:
+        print('sdem security purge: this SDEM cannot purge archived data (sdem profile purge, EL-16) — reinstall SDEM 0.19.0 from its tag', file=sys.stderr); return 2
+    args = ['profile', 'purge'] + (['--archive', a.archive] if a.archive else ['ext:security']) + ['--workspace', a.workspace, '--person', a.person, '--reason', a.reason] \
+           + (['--dry-run'] if a.dry_run else []) + (['--json'] if a.json else [])
     r = sdem(*args); sys.stdout.write(r.stdout); sys.stderr.write(r.stderr); return r.returncode
 
 
@@ -359,13 +383,19 @@ def main(argv=None):
     p = sub.add_parser('remove', help="switch security off in a workspace — its layer and connections are archived, not lost (a person's decision)")
     p.add_argument('--workspace', required=True); p.add_argument('--person', required=True); p.add_argument('--reason', required=True)
     p.add_argument('--dry-run', action='store_true'); p.add_argument('--json', action='store_true')
+    p = sub.add_parser('restore', help="switch security back on from an archive — layer, connections (old ids) and exceptions, checked first (a person's decision)")
+    p.add_argument('--archive', required=True); p.add_argument('--workspace', required=True); p.add_argument('--person', required=True); p.add_argument('--reason', required=True)
+    p.add_argument('--skip-unfit', action='store_true'); p.add_argument('--dry-run', action='store_true'); p.add_argument('--json', action='store_true')
+    p = sub.add_parser('purge', help="delete security's archived data — never the default; --dry-run lists what it would delete and what it cannot reach")
+    p.add_argument('--archive', help='one archive; without it, every security archive in the workspace'); p.add_argument('--workspace', required=True)
+    p.add_argument('--person', required=True); p.add_argument('--reason', required=True); p.add_argument('--dry-run', action='store_true'); p.add_argument('--json', action='store_true')
     p = sub.add_parser('propose', help='controls, threats and boundaries into the security layer, as a change set a person accepts')
     p.add_argument('file'); p.add_argument('--workspace', required=True); p.add_argument('--person', required=True); p.add_argument('--dry-run', action='store_true'); p.add_argument('--json', action='store_true')
     a = ap.parse_args(argv)
     v = re.search(r'\d+\.\d+\.\d+', sdem('--version').stdout or '')
     if v and not supported(v.group(0), MANIFEST['sdem']):
         print(f"sdem security: SDEM {v.group(0)} is not one this extension supports ({MANIFEST['sdem']})", file=sys.stderr); return 1
-    return {'catalogue': cmd_catalogue, 'coverage': cmd_coverage, 'threats': cmd_threats, 'review': cmd_review, 'document': cmd_document, 'remove': cmd_remove, 'propose': cmd_propose}[a.command](a)
+    return {'catalogue': cmd_catalogue, 'coverage': cmd_coverage, 'threats': cmd_threats, 'review': cmd_review, 'document': cmd_document, 'remove': cmd_remove, 'restore': cmd_restore, 'purge': cmd_purge, 'propose': cmd_propose}[a.command](a)
 
 
 def entry():

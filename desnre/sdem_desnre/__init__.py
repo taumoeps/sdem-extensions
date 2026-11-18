@@ -409,7 +409,8 @@ def carry_packs(files, profile_files):
     files['sdem-profile.json'] = {**prof, 'includes': incs}
 
 
-EXT_RESULTS = {'security': ('review', 'coverage', 'threats')}   # 0.7.8: what a metamodel extension's own commands report, published with the design
+EXT_RESULTS = {'security': ('review', 'coverage', 'threats')}
+EXT_DOCUMENTS = {'security': 'document'}   # 0.7.9: a Markdown report an extension writes, shown under the layer's Document Output   # 0.7.8: what a metamodel extension's own commands report, published with the design
 
 
 def extension_results(ws, files):
@@ -426,6 +427,9 @@ def extension_results(ws, files):
             if isinstance(d, dict):
                 d.pop('workspace', None)
                 out.setdefault(name, {})[cmd] = d
+        if name in EXT_DOCUMENTS:
+            r = run_sdem(ws, [name, EXT_DOCUMENTS[name], '--workspace', str(ws)])
+            if r.returncode == 0 and r.stdout.strip(): out.setdefault(name, {})['document'] = r.stdout
     return out
 
 

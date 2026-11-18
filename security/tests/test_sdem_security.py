@@ -82,6 +82,14 @@ class SecurityTests(unittest.TestCase):
         found = sorted(x['record'] for x in S.computed_findings(self.ws) if x['rule'] == 'SEC-S08')
         self.assertEqual(found, ['CMP-PAY-CAPTURE', 'CMP-PAY-EXEC', 'CMP-PAY-VALIDATE'])   # all three read the payment instruction; none is audited
 
+    def test_the_document_reads_the_review_coverage_and_checklist(self):  # sdem security document
+        md = run('security', 'document', '--workspace', self.ws)
+        self.assertTrue(md.startswith('# Security review'), md[:60])
+        for h in ('## Summary', '## 1. Findings from the security rules', '## 2. Records no control protects', '## 3. Coverage by security layer',
+                  '## 4. Threats and what mitigates them', '## 5. STRIDE checklist'):
+            self.assertIn(h, md)
+        self.assertIn('SEC-S08', md); self.assertIn('Payment instruction disclosed (THR-DISCLOSE)', md)   # a finding, and the threat with its name
+
     def test_review_runs_the_security_standard(self):  # MX-14
         d = run('security', 'review', '--workspace', self.ws, '--json')
         self.assertIn('findings', d); self.assertTrue(all(str(f['rule']).startswith('SEC-') for f in d['findings']))

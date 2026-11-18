@@ -25,6 +25,7 @@ sdem connect SEC-SC28 PROTECTS DATA-CONSENT --workspace <ws> --person <you> --ev
 sdem security coverage --workspace <ws>                  # per record: its controls, what enforces them, its threats — by S1–S5
 sdem security threats  --workspace <ws>                  # a STRIDE checklist per record — prompts for a person, never records
 sdem security review   --workspace <ws>                  # what the security design still lacks, weakest first
+sdem security document --workspace <ws> [-o review.md]   # the review as a document: findings, coverage per S1–S5, threats, the STRIDE checklist
 sdem trace SEC-SC28 --graph <graph>                      # trace and impact follow the security links like any other
 ```
 

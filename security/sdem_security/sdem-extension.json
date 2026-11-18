@@ -1,7 +1,7 @@
 {
   "name": "security",
   "command": "sdem-security",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "The security architecture: controls, threats and trust boundaries in S1\u2013S5 across A1\u2013A4, on NIST SP 800-53 Rev. 5 and CSF 2.0",
   "kind": [
     "metamodel",

@@ -70,14 +70,14 @@ class SecurityTests(unittest.TestCase):
         self.assertTrue({'SEC-S03a', 'SEC-S03b', 'SEC-S06a', 'SEC-S06b'} <= ids)
 
     def test_a_security_requirement_no_control_meets_is_found(self):  # SEC-S07
-        f = self.ws / 'requirements.json'; before = f.read_text()
-        d = json.loads(before); d['requirements'].append({'id': 'REQ-SEC-01', 'version': 1, 'status': 'proposed', 'name': 'Payment data is protected at rest',
+        f = self.ws / 'requirements.json'; before = f.read_bytes()   # restored byte for byte — write_text would change line endings on Windows
+        d = json.loads(before.decode('utf-8')); d['requirements'].append({'id': 'REQ-SEC-01', 'version': 1, 'status': 'proposed', 'name': 'Payment data is protected at rest',
             'statement': 'Payment instructions are encrypted at rest.', 'owner_layer': 'A3', 'category': 'security', 'scope': 'record', 'subject': 'ENT-PAY-INSTR'})
         f.write_text(json.dumps(d))
         try:
             found = [x for x in S.computed_findings(self.ws) if x['rule'] == 'SEC-S07']
             self.assertEqual([x['record'] for x in found], ['REQ-SEC-01'])
-        finally: f.write_text(before)
+        finally: f.write_bytes(before)
 
     def test_a_component_on_personal_data_without_audit_is_found(self):  # SEC-S08
         found = sorted(x['record'] for x in S.computed_findings(self.ws) if x['rule'] == 'SEC-S08')

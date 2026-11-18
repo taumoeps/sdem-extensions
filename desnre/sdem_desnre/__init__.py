@@ -452,7 +452,7 @@ def no_local_paths(x, ws):
             if not p.is_absolute(): return t
             q = p.resolve()
             if q == root or root in q.parents: return q.relative_to(root).as_posix() or '.'
-            if not any(q == d or d in q.parents for d in private) and not t.startswith(str(Path.home())): return t   # /tmp, /etc, /payments: not personal
+            if not (q == home or any(d in q.parents for d in private)): return t   # inside home or a temp folder is personal; /tmp itself, /etc, /payments are not
             return q.name if q.suffix else '…'
         except (OSError, ValueError, RuntimeError): return t
     def fix(t):

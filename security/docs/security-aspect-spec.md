@@ -112,6 +112,7 @@ Not yet: the evidence in `control_evidence` is a reference only — nothing chec
 - **`review` never reports an all-clear it cannot vouch for:** it stops with a message when `sdem comply` fails, answers in an unknown
   form, or the SEC standard is not in the profile; it takes findings by the standard's id, not by a `SEC-` prefix.
 - **`sdem security remove`** switches it off (MX-16): the layer and its connections archived, their ids retired, the design still passing.
+- **0.2.0 — the whole life** ([extension lifecycle spec](https://github.com/taumoeps/bian-sdem-framework/blob/main/docs/design/sdem-extension-lifecycle-spec.md), EL-01…EL-17): `restore` (back from an archive, the same link ids) and `purge` (the archived data deleted, never the default); the manifest's `viewer` (what it offers DESNRE); with sdem-desnre 0.8.0 the design's state — on or off, since, by, why — is published, and the site says when security was switched off. The README's *Install* and *Remove* sections give the two ways to install and every removal step.
 
 **Every rule is a warning.** Switching security on in an existing design must not stop its work: with errors, `sdem check` (and so `sdem connect`, which refuses a change that leaves the check failing) would fail before the first control could be added. `sdem comply` and `sdem security review` report every finding; an organisation that wants them to block adds its own rules at `error` in its profile.
 

@@ -23,9 +23,34 @@ The site shows the extension's results as they were when the design was last pub
 
 ## Install and switch on
 
+Choose one of two ways. Nothing is ever installed on the DESNRE site: it is hosted, and its security support is already there.
+
+**1. The SDEM command line only**
+
 ```
-pip install "git+https://github.com/taumoeps/sdem-extensions#subdirectory=security"      # into SDEM's environment (SDEM 0.19 or later)
-sdem profile include ext:security --workspace <ws> --person <you> --reason "security design"   # a person's decision, recorded
+pip install "git+https://github.com/taumoeps/bian-sdem-framework@v0.19.0"                 # SDEM
+pip install "git+https://github.com/taumoeps/sdem-extensions#subdirectory=security"      # this extension, into SDEM's environment
+```
+
+You get the security layer, its checks and every `sdem security` command, and `sdem document --layer S`. SDEM's own local
+pages (`sdem workbench`, `sdem dashboard`) list the security records, but have no Security views.
+
+**2. The command line and DESNRE**
+
+```
+pip install "git+https://github.com/taumoeps/bian-sdem-framework@v0.19.0"
+pip install "git+https://github.com/taumoeps/sdem-extensions#subdirectory=security"
+pip install "git+https://github.com/taumoeps/sdem-extensions#subdirectory=desnre"       # the publisher, 0.8.0 or later
+```
+
+Everything in 1, and `sdem desnre create` / `publish`. Publishing a design with security switched on shows, on the site, the 3D
+Security view, the Security tab, security in Health, Metamodel, Connections and Document Output, the Extensions panel, and the AI
+agent's security support. *Already installed from GitHub on this machine? Add `--force-reinstall` — pip does not notice a moved tag.*
+
+**Then, in each workspace that should have it** — a person's decision, recorded:
+
+```
+sdem profile include ext:security --workspace <ws> --person <you> --reason "security design"
 sdem profile adopt   --workspace <ws> --person <you> --reason "the security layer"             # adds security.json
 ```
 
@@ -70,12 +95,17 @@ Nothing changes on the site without a publish, and publishing is always your ste
 
 ## Remove
 
-```
-sdem security remove --workspace <ws> --person <you> --reason "…" --dry-run      # then without --dry-run
-```
+Removal is separate steps, each a person's, so nothing is lost by accident: switching off can be undone; deleting cannot.
 
-A person's decision, recorded. SDEM takes `ext:security` out of the profile and keeps the security layer and every connection that
-touches it, whole, in `archive/ext-security-<date>.json`; their link ids are never given again. The design passes its checks
-afterwards. (Needs SDEM 0.19.0 as tagged on 2026-11-19 or later — `sdem profile exclude`, MX-16.) Do not delete `security.json` by hand: its connections would
-be left behind. Uninstalling the package while a workspace still includes it makes SDEM refuse that workspace with a message naming
-it — never check it as if its security records were not there.
+| To … | Do | What it changes |
+|---|---|---|
+| **switch security off in a workspace** | `sdem security remove --workspace <ws> --person <you> --reason "…" --dry-run`, then without `--dry-run` | the layer, its connections and the exceptions naming them leave the design and are kept whole in `archive/ext-security-<date>.json`; their link ids are never given again; the design passes its checks afterwards. **No data is deleted.** |
+| **…and on DESNRE** | `sdem desnre create <name>`, then `sdem desnre publish <name>` | the site hides Security for that design and **says** it was switched off — when, by whom and why. Its previous version and document history still hold the old security content |
+| **switch it back on** | `sdem security restore --archive archive/ext-security-<date>.json --workspace <ws> --person <you> --reason "…"`, then publish | the layer, connections (the same ids) and exceptions back, checked first |
+| **delete the security data** (optional; e.g. a data request) | `sdem security purge --workspace <ws> --person <you> --reason "…" --dry-run`, then without it, then publish | the archive deleted (the ids stay retired; the decision keeps no content); the publish has the site remove security from its previous version and document history. **Not reached:** the workspace's git history, copies people downloaded — the command names them |
+| **remove the commands from this machine** (optional) | `pip uninstall sdem-security` | the commands and pack gone; no data touched. A workspace that still includes security is refused, with a message naming it, until it is switched off or the package is reinstalled |
+
+**To remove everything**, in this order: `remove` → publish → `purge` → publish → `pip uninstall sdem-security` (and `pip uninstall
+sdem-desnre` if nothing else on this machine publishes). Do not delete `security.json` by hand: its connections would be left behind.
+
+The rules behind every step: the [extension lifecycle spec](https://github.com/taumoeps/bian-sdem-framework/blob/main/docs/design/sdem-extension-lifecycle-spec.md) (EL-01…EL-17).

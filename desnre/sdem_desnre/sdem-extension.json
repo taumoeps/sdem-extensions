@@ -1,7 +1,7 @@
 {
   "name": "desnre",
   "command": "sdem-desnre",
-  "version": "0.7.5",
+  "version": "0.7.6",
   "description": "Publishes a made-up SDEM workspace to your own page of the DESNRE site, as a 3D view — a draft first, then live",
   "kind": [
     "publisher"

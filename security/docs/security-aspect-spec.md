@@ -17,20 +17,22 @@ For any design: **what must be protected, against what, by which controls, enfor
 | Notation | **ArchiMate** risk and security modelling | each type is drawn as an ArchiMate element (§3); SDEM already uses ArchiMate names | The Open Group — element names only |
 | Outcomes | **NIST CSF 2.0** (CSWP 29, 2024) | every control carries its CSF function — Govern, Identify, Protect, Detect, Respond, Recover — and may carry a category (e.g. `PR.AA`) | NIST publication; identifiers and short names only are shipped |
 | Controls | **NIST SP 800-53 Rev. 5**, from NIST's OSCAL catalogue | the reference catalogue a control is chosen from, by id (`IA-2`, `SC-8`, `SC-28`) | OSCAL content: *"in the public domain within the United States … we waive copyright and related rights in the work worldwide … even for commercial purposes"* ([usnistgov/oscal-content, LICENSE.md](https://github.com/usnistgov/oscal-content/blob/main/LICENSE.md)) |
-| Trust | **NIST SP 800-207** Zero Trust Architecture | trust boundaries and where policy is enforced (§3, `SEC.TrustBoundary`) | NIST publication; concepts only |
+| Trust | **NIST SP 800-207** Zero Trust Architecture | trust boundaries and where policy is enforced (§3, `SEC.S.TrustBoundary`) | NIST publication; concepts only |
 | Threats | **STRIDE** | each threat's category: Spoofing, Tampering, Repudiation, Information disclosure, Denial of service, Elevation of privilege | a published method; category names only |
 | Optional | MITRE ATT&CK (technique ids on a threat), OWASP ASVS (an A3 level) | an attribute that cites an id; nothing shipped | cited only |
 | Not used | SABSA, ISO/IEC 27001 Annex A text, CIS Controls | may be cited by identifier in `evidence`, never reproduced | proprietary or restricted |
 
-## 3. Record types (aspect `SEC`, file `aspect-sec.json`)
+> As built in SDEM (2026-11-18): the security architecture is a profile layer placed **across** the stack (LR-11), shipped as this extension's pack and switched on with `sdem profile include ext:security`. Links use ArchiMate kinds SDEM knows.
+
+## 3. Record types (layer `S`, across the stack — file `security.json`; types named `SEC.S.<Name>`, as profile layer types are)
 
 | Type | ArchiMate | Required attributes | Optional attributes |
 |---|---|---|---|
-| **SEC.SecurityControl** — a measure that protects something | Requirement (a control measure) | `security_layer` (S1–S5), `control_id` (an SP 800-53 id, e.g. `SC-28`, checked against the catalogue), `csf_function` (GV · ID · PR · DE · RS · RC), `control_kind` (preventive · detective · corrective), `implementation_status` (planned · partial · implemented · not_applicable) | `csf_category` (e.g. `PR.DS`), `requirements` (ids in `requirements.json` it meets), `evidence` (`kind:reference`, needed before `implemented`), `owner` |
-| **SEC.Threat** — what could go wrong to what | Assessment | `security_layer` (S1–S5), `stride` (one or more of S · T · R · I · D · E), `likelihood`, `impact` (low · medium · high) | `treatment` (mitigate · accept · transfer · avoid), `attack_ref` (ATT&CK id), `description` |
-| **SEC.TrustBoundary** — where trust changes and policy is enforced | Grouping | `boundary_kind` (network · identity · tenant · process) | `enforcement` (what enforces it, e.g. an API gateway, mTLS) |
+| **SEC.S.SecurityControl** — a measure that protects something | Requirement (a control measure) | `security_layer` (S1–S5), `control_id` (an SP 800-53 id, e.g. `SC-28`, checked against the catalogue), `csf_function` (GV · ID · PR · DE · RS · RC), `control_kind` (preventive · detective · corrective), `implementation_status` (planned · partial · implemented · not_applicable) | `csf_category` (e.g. `PR.DS`), `requirements` (ids in `requirements.json` it meets), `evidence` (`kind:reference`, needed before `implemented`), `owner` |
+| **SEC.S.Threat** — what could go wrong to what | Assessment | `security_layer` (S1–S5), `stride` (one or more of S · T · R · I · D · E), `likelihood`, `impact` (low · medium · high) | `treatment` (mitigate · accept · transfer · avoid), `attack_ref` (ATT&CK id), `description` |
+| **SEC.S.TrustBoundary** — where trust changes and policy is enforced | Grouping | `boundary_kind` (network · identity · tenant · process) | `enforcement` (what enforces it, e.g. an API gateway, mTLS) |
 
-**Not new types — SDEM already holds them (used by the aspect's rules, §6):** information classification (`access_classification`, every record), personal data (`personal_information`, `retention_period` on `A3.DataEntity`), API authentication (`security_scheme` on `A3.ApplicationInterface`), network trust (`zone_kind`, `zone_level`, `internet_facing` on `A4.NetworkZone`), transport protection (`protocol`, `encrypted` on `A4.Path`), and **security requirements** (category `security` in `requirements.json`). The aspect gives `access_classification` its values: `public · internal · confidential · restricted`.
+**Not new types — SDEM already holds them (used by the aspect's rules, §6):** information classification (`access_classification`, every record), personal data (`personal_information`, `retention_period` on `A3.DataEntity`), API authentication (`security_scheme` on `A3.ApplicationInterface`), network trust (`zone_kind`, `zone_level` on `A4.NetworkZone`; `internet_facing` on `A3.ApplicationInterface` and A4 infrastructure), transport protection (`protocol`, `encrypted` on `A4.Path`), and **security requirements** (category `security` in `requirements.json`). The aspect gives `access_classification` its values: `public · internal · confidential · restricted`.
 
 ## 4. Links
 
@@ -38,8 +40,8 @@ For any design: **what must be protected, against what, by which controls, enfor
 |---|---|---|---|---|
 | **PROTECTS** | SecurityControl → A1 process, business object · A2 service domain · A3 data entity, component, interface, API operation · A4 node, zone, path, system software, deployment | the control protects that record | association (directed) | a design reference (`design:` or `document:`) |
 | **ENFORCED_BY** | SecurityControl → A3 component, interface · A4 node, system software, deployment | the record carries the control out (IA-2 by Identity; SC-12 by key custody) | realization (record realises the control) | a design reference; for `implemented`, an implementation reference (`config:`, `test:`) |
-| **THREATENS** | Threat → any A1–A4 record | the threat applies to that record | influence (negative) | a design reference or a threat-model session (`review:`) |
-| **MITIGATES** | SecurityControl → Threat (inside the aspect) | the control reduces the threat | influence (positive) | — (inside the aspect) |
+| **THREATENS** | Threat → any A1–A4 record | the threat applies to that record | association (threatens) | a design reference or a threat-model session (`review:`) |
+| **MITIGATES** | SecurityControl → Threat (inside the aspect) | the control reduces the threat | association (mitigates) | — (inside the aspect) |
 | **BOUNDS** | TrustBoundary → A4 network zone · A3 component, interface | the records inside the boundary | aggregation | a design reference |
 
 Links into A1–A4 are proposed and approved like SDEM's own (`sdem link`, `sdem approve`), by a person (CTL-21). No inference in the first version (MX-D4): every record and link comes from a person or a source.
@@ -54,7 +56,7 @@ Links into A1–A4 are proposed and approved like SDEM's own (`sdem link`, `sdem
 | **S4 Application Security Architecture** | A3-2 | authentication and authorisation per interface and operation, input validation, sessions, audit events |
 | **S5 Technology Security Architecture** | A4 | zones as trust boundaries, encryption on paths, keys and secrets, hardening, logging, backup and recovery |
 
-**Every control and threat belongs to one security layer** — a required attribute `security_layer` (S1 … S5) on `SEC.SecurityControl` and `SEC.Threat`; a trust boundary is S5 (network) or S4 (identity, process, tenant). Its links still reach any layer: IA-2 sits in S4 and also **PROTECTS** the A1 process it guards — the lines down the stack are security running through the design.
+**Every control and threat belongs to one security layer** — a required attribute `security_layer` (S1 … S5) on `SEC.S.SecurityControl` and `SEC.S.Threat`; a trust boundary is S5 (network) or S4 (identity, process, tenant). Its links still reach any layer: IA-2 sits in S4 and also **PROTECTS** the A1 process it guards — the lines down the stack are security running through the design.
 
 ### Per layer — typical controls and threats
 
@@ -69,16 +71,18 @@ Links into A1–A4 are proposed and approved like SDEM's own (`sdem link`, `sdem
 
 | Rule | Check | NIST |
 |---|---|---|
-| **SEC-S01** | Every data entity with `personal_information` is `confidential` or `restricted`, and is **PROTECTED** by an SC-28 control (protection at rest) | SC-28 · PR.DS |
-| **SEC-S02** | Every interface reachable from an `internet_facing` zone has `security_scheme` `oauth2`, `openIdConnect` or `mutualTLS` | IA-2, IA-8 · PR.AA |
+| **SEC-S01** | Every data entity with `personal_information` is `confidential` or `restricted` (S01a), and is **PROTECTED** by at least one control (S01b); `sdem security review` names any without an SC-28 control (protection at rest) — SDEM's cross-layer rules check *every* linked record, so "one of them is SC-28" is the review's, not a rule's | SC-28 · PR.DS |
+| **SEC-S02** | Every `internet_facing` interface has `security_scheme` `oauth2`, `openIdConnect` or `mutualTLS` | IA-2, IA-8 · PR.AA |
 | **SEC-S03** | Every path has `encrypted: true` and a `protocol` (a path crossing zones: error; inside a zone: warning) | SC-8 · PR.DS |
-| **SEC-S04** | Every `internet_facing` zone is **BOUNDED** by a trust boundary with an `enforcement` | SC-7 · PR.IR |
+| **SEC-S04** | Every DMZ (`zone_kind: dmz`, the internet edge) is **BOUNDED** by a trust boundary | SC-7 · PR.IR |
 | **SEC-S05** | A control `implemented` has `evidence` and at least one **ENFORCED_BY** | CA-2 · ID.IM |
 | **SEC-S06** | A threat rated high (likelihood or impact) has a **MITIGATES**, or `treatment: accept` under a person's exception (`sdem exception grant`) | RA-3, RA-7 · ID.RA |
 | **SEC-S07** | Every `security` requirement is met by at least one control (`requirements`) | PL-8 · GV.PO |
 | **SEC-S08** | A component that accesses personal data is **PROTECTED** by an audit control (AU-2 or AU-12) | AU-2, AU-12 · DE.CM |
 
 A value not given is `unresolved`, never compliant (PR-11a, PR-20) — e.g. the example's two paths whose `encrypted` is not given.
+
+**As built: every rule is a warning.** Switching security on in an existing design must not stop its work: with errors, `sdem check` (and so `sdem connect`, which refuses a change that leaves the check failing) would fail before the first control could be added. `sdem comply` and `sdem security review` report every finding; an organisation that wants them to block adds its own rules at `error` in its profile.
 
 ## 7. Commands (`sdem security …`, through EXT-15)
 

@@ -386,6 +386,29 @@ LAYERS = ('A1', 'A2', 'A3', 'A4')
 WS_FILES = FILES + ['mappings.json', 'requirements.json', 'sdem-profile.json']
 
 
+def carry_packs(files, profile_files):
+    """MX-01: a metamodel extension the workspace includes (\"ext:<name>\") is not installed on the site — so its pack, and the
+    standards the pack includes, go with the design as files (ext/<name>/…), and the published profile names that copy."""
+    prof = files.get('sdem-profile.json')
+    if not prof: return
+    incs = []
+    for inc in prof.get('includes', []):
+        if not str(inc).startswith('ext:'): incs.append(inc); continue
+        name = inc[4:]
+        prog = shutil.which(f'sdem-{name}', path=str(Path(sys.executable).parent)) or shutil.which(f'sdem-{name}')
+        try: man = json.loads(subprocess.run([prog, '--manifest'], capture_output=True, text=True, timeout=20).stdout) if prog else {}
+        except (OSError, ValueError, subprocess.SubprocessError): man = {}
+        pack = Path(man.get('pack') or '')
+        if not pack.is_file(): incs.append(inc); continue   # SDEM refuses it on the site too (MX-11a): said, not hidden
+        doc = json.loads(pack.read_text(encoding='utf-8')); base = f'ext/{name}'
+        profile_files[f'{base}/{pack.name}'] = doc
+        for sub in doc.get('includes', []):
+            f = (pack.parent / sub)
+            if f.is_file(): profile_files[f'{base}/{sub}'] = json.loads(f.read_text(encoding='utf-8'))
+        incs.append(f'{base}/{pack.name}')
+    files['sdem-profile.json'] = {**prof, 'includes': incs}
+
+
 def workspace_bundle(ws, v, mm):
     """DW-40: what the workbench shows — the workspace's own files, and what SDEM says about them: the check report, each layer's
     document, the kinds of record each layer allows (with the profile's), and how each layer is drawn. All through SDEM's commands."""
@@ -411,6 +434,10 @@ def workspace_bundle(ws, v, mm):
                 rel = Path(os.path.relpath(f.resolve(), Path(ws).resolve())).as_posix()
                 if rel.count('../') <= 4:
                     profile_files[rel] = json.loads(f.read_text(encoding='utf-8'))
+    for l in ((profile or {}).get('layers') or []):   # a profile's own layers — e.g. the security architecture's security.json (MX, LR-11)
+        p = Path(ws) / l.get('file', '')
+        if l.get('file') and p.is_file() and l['file'] not in files: files[l['file']] = json.loads(p.read_text(encoding='utf-8'))
+    carry_packs(files, profile_files)
     return {
         'sdem': v, 'metamodel': mm, 'files': files, 'profile': profile, 'profile_files': profile_files,
         'check': js(['check', '--workspace', str(ws), '--json']),

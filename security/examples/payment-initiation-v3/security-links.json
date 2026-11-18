@@ -1,0 +1,182 @@
+[
+ {
+  "source": "SEC-IA2",
+  "relationship": "PROTECTS",
+  "target": "PROC-AUTH"
+ },
+ {
+  "source": "SEC-IA2",
+  "relationship": "PROTECTS",
+  "target": "SD-PARTY-AUTHENTICATION"
+ },
+ {
+  "source": "SEC-IA2",
+  "relationship": "ENFORCED_BY",
+  "target": "APP-IDENT"
+ },
+ {
+  "source": "SEC-IA8",
+  "relationship": "PROTECTS",
+  "target": "IFC-PAYMENT-INITIATION"
+ },
+ {
+  "source": "SEC-IA8",
+  "relationship": "ENFORCED_BY",
+  "target": "APP-EDGE"
+ },
+ {
+  "source": "SEC-SC8",
+  "relationship": "PROTECTS",
+  "target": "PATH-EDGE"
+ },
+ {
+  "source": "SEC-SC8",
+  "relationship": "PROTECTS",
+  "target": "PATH-DATA"
+ },
+ {
+  "source": "SEC-SC8",
+  "relationship": "PROTECTS",
+  "target": "PATH-KEY"
+ },
+ {
+  "source": "SEC-SC8",
+  "relationship": "PROTECTS",
+  "target": "PATH-HANDOFF"
+ },
+ {
+  "source": "SEC-SC8",
+  "relationship": "ENFORCED_BY",
+  "target": "NODE-EDGE"
+ },
+ {
+  "source": "SEC-SC8",
+  "relationship": "ENFORCED_BY",
+  "target": "NODE-INT"
+ },
+ {
+  "source": "SEC-SC28",
+  "relationship": "PROTECTS",
+  "target": "DATA-CONSENT"
+ },
+ {
+  "source": "SEC-SC28",
+  "relationship": "PROTECTS",
+  "target": "DATA-PAYMENT"
+ },
+ {
+  "source": "SEC-SC28",
+  "relationship": "PROTECTS",
+  "target": "DATA-AUDIT"
+ },
+ {
+  "source": "SEC-SC28",
+  "relationship": "ENFORCED_BY",
+  "target": "SYS-DB"
+ },
+ {
+  "source": "SEC-SC12",
+  "relationship": "PROTECTS",
+  "target": "DATA-CONSENT"
+ },
+ {
+  "source": "SEC-SC12",
+  "relationship": "PROTECTS",
+  "target": "DATA-PAYMENT"
+ },
+ {
+  "source": "SEC-SC12",
+  "relationship": "ENFORCED_BY",
+  "target": "SYS-KMS"
+ },
+ {
+  "source": "SEC-SC7",
+  "relationship": "PROTECTS",
+  "target": "ZONE-EDGE"
+ },
+ {
+  "source": "SEC-SC7",
+  "relationship": "ENFORCED_BY",
+  "target": "NODE-EDGE"
+ },
+ {
+  "source": "SEC-SI10",
+  "relationship": "PROTECTS",
+  "target": "API-PAYMENT-CREATE"
+ },
+ {
+  "source": "SEC-SI10",
+  "relationship": "PROTECTS",
+  "target": "API-CONSENT-CREATE"
+ },
+ {
+  "source": "SEC-SI10",
+  "relationship": "ENFORCED_BY",
+  "target": "APP-PAYHUB"
+ },
+ {
+  "source": "SEC-SI10",
+  "relationship": "ENFORCED_BY",
+  "target": "APP-CONSENT"
+ },
+ {
+  "source": "SEC-AU12",
+  "relationship": "PROTECTS",
+  "target": "APP-CONSENT"
+ },
+ {
+  "source": "SEC-AU12",
+  "relationship": "PROTECTS",
+  "target": "APP-PAYHUB"
+ },
+ {
+  "source": "SEC-AU12",
+  "relationship": "ENFORCED_BY",
+  "target": "APP-EDGE"
+ },
+ {
+  "source": "SEC-AU12",
+  "relationship": "ENFORCED_BY",
+  "target": "SYS-OBS"
+ },
+ {
+  "source": "SEC-AC5",
+  "relationship": "PROTECTS",
+  "target": "PROC-DEBIT"
+ },
+ {
+  "source": "SEC-AC5",
+  "relationship": "PROTECTS",
+  "target": "ROLE-BANK"
+ },
+ {
+  "source": "THR-SPOOF-TPP",
+  "relationship": "THREATENS",
+  "target": "IFC-PAYMENT-INITIATION"
+ },
+ {
+  "source": "THR-TAMPER-HANDOFF",
+  "relationship": "THREATENS",
+  "target": "PATH-HANDOFF"
+ },
+ {
+  "source": "THR-REPUDIATE-CONSENT",
+  "relationship": "THREATENS",
+  "target": "DATA-CONSENT"
+ },
+ {
+  "source": "THR-DISCLOSE-CONSENT",
+  "relationship": "THREATENS",
+  "target": "DATA-CONSENT"
+ },
+ {
+  "source": "THR-FLOOD-EDGE",
+  "relationship": "THREATENS",
+  "target": "ZONE-EDGE"
+ },
+ {
+  "source": "TB-INTERNET-EDGE",
+  "relationship": "BOUNDS",
+  "target": "ZONE-EDGE"
+ }
+]

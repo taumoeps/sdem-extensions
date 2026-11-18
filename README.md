@@ -5,6 +5,7 @@ Extensions for [SDEM](https://github.com/taumoeps/bian-sdem-framework), each its
 | Extension | Does | Install |
 |---|---|---|
 | [**desnre**](desnre/) | puts a made-up SDEM workspace on your own page of the DESNRE site, as a 3D view — sign up at desnre.vercel.app/account, then `sdem desnre login`, `create`, `publish` | `pip install "git+https://github.com/taumoeps/sdem-extensions#subdirectory=desnre"` |
+| [**security**](security/) | a **metamodel extension**: adds the security architecture — controls, threats and trust boundaries in S1–S5 across A1–A4, on NIST SP 800-53 Rev. 5 and CSF 2.0 — switched on per workspace (`sdem profile include ext:security`) | `pip install "git+https://github.com/taumoeps/sdem-extensions#subdirectory=security"` |
 
 Start a new one from [**template/**](template/).
 

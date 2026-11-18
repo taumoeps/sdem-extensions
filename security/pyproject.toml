@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sdem-security"
+version = "0.1.0"
+description = "The security architecture for SDEM: controls, threats and trust boundaries in S1–S5 across A1–A4, on NIST SP 800-53 Rev. 5 and CSF 2.0 — a metamodel extension"
+requires-python = ">=3.9"
+license = {text = "Apache-2.0"}
+dependencies = []
+
+[project.scripts]
+sdem-security = "sdem_security:entry"
+
+[tool.setuptools]
+packages = ["sdem_security"]
+
+[tool.setuptools.package-data]
+sdem_security = ["*.json"]

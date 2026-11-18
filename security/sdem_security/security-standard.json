@@ -1,0 +1,130 @@
+{
+ "format": "sdem-standard/1",
+ "description": "The security architecture standard shipped with sdem-security: rules on NIST SP 800-53 Rev. 5 controls, checked by sdem comply.",
+ "standard": {
+  "id": "SEC",
+  "title": "Security architecture standard (sdem-security)",
+  "version": "1",
+  "owner": "sdem-security maintainers",
+  "source": "NIST SP 800-53 Rev. 5 and CSF 2.0 (public domain); security/docs/security-aspect-spec.md \u00a76"
+ },
+ "rules": [
+  {
+   "id": "SEC-S01a",
+   "entity": "A3.DataEntity",
+   "when": {
+    "personal_information": true
+   },
+   "check": {
+    "attribute": "access_classification",
+    "op": "in",
+    "value": [
+     "confidential",
+     "restricted"
+    ]
+   },
+   "message": "personal data is classified confidential or restricted (SC-28, PR.DS)",
+   "severity": "warning"
+  },
+  {
+   "id": "SEC-S01b",
+   "entity": "A3.DataEntity",
+   "when": {
+    "personal_information": true
+   },
+   "across": {
+    "relationship": "PROTECTS",
+    "direction": "in",
+    "min": 1
+   },
+   "message": "personal data is protected by at least one control (SC-28 at rest \u2014 sdem security review names any without one)",
+   "severity": "warning"
+  },
+  {
+   "id": "SEC-S02",
+   "entity": "A3.ApplicationInterface",
+   "check": {
+    "attribute": "security_scheme",
+    "op": "in",
+    "value": [
+     "oauth2",
+     "openIdConnect",
+     "mutualTLS"
+    ]
+   },
+   "message": "an internet-facing interface authenticates its callers with oauth2, OpenID Connect or mutual TLS (IA-2, IA-8, PR.AA)",
+   "when": {
+    "internet_facing": true
+   },
+   "severity": "warning"
+  },
+  {
+   "id": "SEC-S03",
+   "entity": "A4.Path",
+   "check": {
+    "attribute": "encrypted",
+    "op": "==",
+    "value": true
+   },
+   "message": "a communication path is encrypted (SC-8, PR.DS)",
+   "severity": "warning"
+  },
+  {
+   "id": "SEC-S04",
+   "entity": "A4.NetworkZone",
+   "when": {
+    "zone_kind": "dmz"
+   },
+   "across": {
+    "relationship": "BOUNDS",
+    "direction": "in",
+    "min": 1
+   },
+   "message": "a DMZ \u2014 the internet edge \u2014 is bounded by a trust boundary (SC-7, PR.IR)",
+   "severity": "warning"
+  },
+  {
+   "id": "SEC-S05a",
+   "entity": "SEC.S.SecurityControl",
+   "when": {
+    "implementation_status": "implemented"
+   },
+   "require": [
+    "control_evidence"
+   ],
+   "message": "an implemented control shows its evidence (CA-2, ID.IM)",
+   "severity": "warning"
+  },
+  {
+   "id": "SEC-S05b",
+   "entity": "SEC.S.SecurityControl",
+   "when": {
+    "implementation_status": [
+     "implemented",
+     "partial"
+    ]
+   },
+   "across": {
+    "relationship": "ENFORCED_BY",
+    "direction": "out",
+    "min": 1
+   },
+   "message": "a control in place says what enforces it (CA-2)",
+   "severity": "warning"
+  },
+  {
+   "id": "SEC-S06",
+   "entity": "SEC.S.Threat",
+   "when": {
+    "impact": "high"
+   },
+   "link": {
+    "kind": "mitigates",
+    "direction": "in",
+    "min": 1
+   },
+   "message": "a high-impact threat is mitigated by a control \u2014 or accepted under a person's exception (RA-3, RA-7, ID.RA)",
+   "severity": "warning"
+  }
+ ]
+}

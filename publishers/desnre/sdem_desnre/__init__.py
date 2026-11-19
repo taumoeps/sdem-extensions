@@ -518,6 +518,16 @@ def no_local_paths(x, ws):
     return fix(x)
 
 
+def viewpoints(js):
+    """ARV-23 (0.8.1): SDEM's viewpoint definitions — what each plate draws and leaves out, as data — for the site to draw from. An SDEM
+    without `sdem viewpoint` gives none, and the site draws as before (ARV-24)."""
+    out = {}
+    for v in ((js(['viewpoint', 'list', '--json']) or {}).get('viewpoints') or []):
+        d = js(['viewpoint', 'show', v['name'], '--json'])
+        if isinstance(d, dict): d.pop('sdem', None); out[v['name']] = d
+    return out
+
+
 def workspace_bundle(ws, v, mm):
     """DW-40: what the workbench shows — the workspace's own files, and what SDEM says about them: the check report, each layer's
     document, the kinds of record each layer allows (with the profile's), and how each layer is drawn. All through SDEM's commands."""
@@ -559,6 +569,7 @@ def workspace_bundle(ws, v, mm):
         'documents': docs,
         'status': no_local_paths(health(js(['status', '--workspace', str(ws), '--json'])), ws),
         'types': {L: (js(['types', L, '--workspace', str(ws), '--json']) or {}).get('types', []) for L in LAYERS + tuple(added)},
+        'viewpoints': viewpoints(js),   # ARV-23: the viewpoint definitions SDEM defines (each type's ArchiMate notation is in 'types')
         'layouts': {L: js(['layout', '--layer', L, '--workspace', str(ws), '--json']) for L in LAYERS},
     }
 

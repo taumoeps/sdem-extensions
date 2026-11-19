@@ -42,5 +42,14 @@ class ExtensionState(unittest.TestCase):
         self.assertEqual(D.extension_changes(on, on), [])
 
 
+class Viewpoints(unittest.TestCase):   # ARV-23
+    def test_the_definitions_sdem_gives_are_sent_and_an_older_sdem_sends_none(self):
+        answers = {('viewpoint', 'list', '--json'): {'sdem': {}, 'viewpoints': [{'name': 'architecture'}]},
+                   ('viewpoint', 'show', 'architecture', '--json'): {'sdem': {}, 'format': 'sdem-viewpoint/1', 'plates': [{'code': 'A1'}]}}
+        got = D.viewpoints(lambda args: answers.get(tuple(args)))
+        self.assertEqual(got, {'architecture': {'format': 'sdem-viewpoint/1', 'plates': [{'code': 'A1'}]}})
+        self.assertEqual(D.viewpoints(lambda args: None), {})
+
+
 if __name__ == '__main__':
     unittest.main()

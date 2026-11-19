@@ -1,0 +1,45 @@
+name: BIAN extension against SDEM
+
+# sdem-bian's tests, run against SDEM installed from its 0.20 branch (the first SDEM that reads an installed sdem-bian, BP-05) —
+# never skipped (SDEM_REQUIRED=1). Its data must equal SDEM's built-in copy while that fallback exists (BP-11).
+on:
+  push:
+    paths: ['metamodel/bian/**', '.github/workflows/bian.yml']
+  pull_request:
+    paths: ['metamodel/bian/**', '.github/workflows/bian.yml']
+  workflow_dispatch:
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        sdem: [release/0.20]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install SDEM at ${{ matrix.sdem }}, then the BIAN extension, in one clean environment
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install "git+https://github.com/taumoeps/bian-sdem-framework@${{ matrix.sdem }}"
+          python -m pip install ./metamodel/bian
+          sdem --version
+          sdem extensions
+      - name: A banking workspace with the package — BIAN read from it
+        shell: bash
+        run: |
+          W="$RUNNER_TEMP/ws"
+          sdem new --workspace "$W" --person ci.check --example payment-initiation
+          sdem profile include ext:bian --workspace "$W" --person ci.check --reason "CI"
+          sdem check --workspace "$W"
+          sdem bian search payment rail
+          sdem-bian search payment rail
+          sdem extensions --workspace "$W"
+      - name: The extension's tests (SDEM required — none skipped)
+        env:
+          SDEM_REQUIRED: '1'
+        run: python -m unittest discover -s metamodel/bian/tests -v

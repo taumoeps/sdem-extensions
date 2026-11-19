@@ -5,6 +5,7 @@ Extensions for [SDEM](https://github.com/taumoeps/bian-sdem-framework), each its
 | Extension | Does | Install |
 |---|---|---|
 | [**desnre**](publishers/desnre/) | puts a made-up SDEM workspace on your own page of the DESNRE site, as a 3D view — sign up at desnre.vercel.app/account, then `sdem desnre login`, `create`, `publish` | `pip install "git+https://github.com/taumoeps/sdem-extensions#subdirectory=publishers/desnre"` |
+| [**bian**](metamodel/bian/) | a **horizontal metamodel extension**: BIAN's Service Domain layer (A2) between Business and Application — its types, link types, inference rules and the BIAN 14 catalogue. SDEM 0.20 reads it when installed and uses its own identical copy otherwise | `pip install ./metamodel/bian` |
 | [**security**](metamodel/security/) | a **metamodel extension**: adds the security architecture — controls, threats and trust boundaries in S1–S5 across A1–A4, on NIST SP 800-53 Rev. 5 and CSF 2.0 — switched on per workspace (`sdem profile include ext:security`) | `pip install "git+https://github.com/taumoeps/sdem-extensions#subdirectory=metamodel/security"` |
 
 **How the repository is laid out** — by what an extension does to SDEM (its manifest's `kind`):

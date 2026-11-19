@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sdem-bian"
+version = "1.0.0.dev1"
+description = "BIAN Service Domain Architecture for SDEM: the A2 layer, its types, link types and inference rules, and the BIAN 14 catalogue — a horizontal metamodel extension"
+requires-python = ">=3.9"
+license = {text = "Apache-2.0"}
+dependencies = []
+
+[project.scripts]
+sdem-bian = "sdem_bian:entry"
+
+[tool.setuptools]
+packages = ["sdem_bian"]
+
+[tool.setuptools.package-data]
+sdem_bian = ["*.json", "data/*.json", "data/catalogue/*"]

@@ -1,0 +1,2 @@
+# sdem-bian data: byte for byte as SDEM ships it, on every platform — its test compares the two (BP-11)
+metamodel/bian/sdem_bian/data/** -text

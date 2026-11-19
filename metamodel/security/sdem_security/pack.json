@@ -244,7 +244,8 @@
    "required_evidence": [
     "design_document"
    ],
-   "description": "the control protects it"
+   "description": "the control protects it",
+   "requires": "ext:bian"
   },
   {
    "source_type": "SEC.S.SecurityControl",
@@ -253,7 +254,8 @@
    "required_evidence": [
     "design_document"
    ],
-   "description": "the control protects it"
+   "description": "the control protects it",
+   "requires": "ext:bian"
   },
   {
    "source_type": "SEC.S.SecurityControl",
@@ -415,7 +417,8 @@
    "required_evidence": [
     "design_document"
    ],
-   "description": "the threat applies to it"
+   "description": "the threat applies to it",
+   "requires": "ext:bian"
   },
   {
    "source_type": "SEC.S.Threat",
@@ -424,7 +427,8 @@
    "required_evidence": [
     "design_document"
    ],
-   "description": "the threat applies to it"
+   "description": "the threat applies to it",
+   "requires": "ext:bian"
   },
   {
    "source_type": "SEC.S.Threat",
@@ -550,7 +554,8 @@
    "required_evidence": [
     "design_document"
    ],
-   "description": "the control protects it"
+   "description": "the control protects it",
+   "requires": "ext:bian"
   },
   {
    "source_type": "SEC.S.SecurityControl",
@@ -595,7 +600,8 @@
    "required_evidence": [
     "design_document"
    ],
-   "description": "the threat applies to it"
+   "description": "the threat applies to it",
+   "requires": "ext:bian"
   },
   {
    "source_type": "SEC.S.Threat",

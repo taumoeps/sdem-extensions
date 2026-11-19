@@ -4,6 +4,10 @@ All made-up data. Rule ids: the [security aspect spec](docs/security-aspect-spec
 SDEM's [metamodel extensions](https://github.com/taumoeps/bian-sdem-framework/blob/main/docs/design/sdem-metamodel-extensions-spec.md) (MX-…) and
 [extension lifecycle](https://github.com/taumoeps/bian-sdem-framework/blob/main/docs/design/sdem-extension-lifecycle-spec.md) (EL-…) specs.
 
+## 0.3.0 (in progress, branch release/0.20)
+
+- **Security with or without BIAN** (SDEM 0.20 step 1, BX-50, BX-51): its six link types to BIAN's A2 types (PROTECTS and THREATENS to service domains, control records, business objects) require `ext:bian`. On a core-only design they are left out — and `sdem profile show` says so — and security covers S1, S3, S4, S5 (S2 empty, said so by SEC-LAYER); with BIAN on, as before.
+
 ## 0.2.1 — 2026-11-19
 
 - **Inheritance in scope (MX-32a).** A type another extension or a profile adds inside a layer (e.g. a network extension's firewall,

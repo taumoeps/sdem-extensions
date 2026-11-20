@@ -4,7 +4,7 @@ payment example and a stand-in for the site's API (fake_site.py: the same contra
 Needs SDEM: a checkout next to this repository (../bian-sdem-framework), or SDEM_HOME.
     python -m unittest discover -s desnre/tests
 """
-import json, contextlib, io, os, shutil, sys, tempfile, time, unittest
+import json, contextlib, io, os, shutil, subprocess, sys, tempfile, time, unittest
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parents[1]          # desnre/
@@ -315,6 +315,22 @@ class Form020Tests(unittest.TestCase):   # SDEM's DL-23: a workspace in the 0.20
         on_data = {n[0] for n in b['nodes'] if n[2] == 2}
         self.assertEqual(on_data, d._data_ids(EXAMPLE) & set(ids(b)))   # exactly the drawn data records on the Data plate
         self.assertFalse(list(new.glob('a1-business.json')))   # the workspace itself only read
+
+    def test_a_design_without_bian_is_four_plates_with_data_second(self):   # SDEM's default: A1 Business, A2 Data, A3 Application, A4 Technology
+        import sdem_desnre as d
+        src = self.tmp / 'core-src'; src.mkdir()
+        ex = SDEM / 'examples' / 'card-fraud-alerts'
+        for f in ('a1-business.json', 'a3-application.json', 'a4-technology.json'): shutil.copy(ex / f, src / f)
+        m = json.loads((ex / 'mappings.json').read_text())
+        m['mappings'] = [x for x in m['mappings'] if not x['source']['type'].startswith('A2.') and not x['target']['type'].startswith('A2.')]
+        (src / 'mappings.json').write_text(json.dumps(m))
+        ws = self.tmp / 'core'
+        r = subprocess.run([*os.environ['SDEM_CMD'].split(), 'new', '--workspace', str(ws), '--person', 'tester', '--core', '--form', '0.20', '--from', str(src)], capture_output=True, text=True)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        model = d.model_for(ws, 'core-check', need_mark=False)
+        self.assertEqual([l['code'] + ' ' + l['name'] for l in model['layers']], ['A1 Business Architecture', 'A2 Data Architecture', 'A3 Application Architecture', 'A4 Technology Architecture'])
+        self.assertEqual((len(model['zones']), model['zoneLayer']), (4, 3))
+        self.assertEqual([x['id'] for x in model['workspace']['stack']], ['business', 'data', 'application', 'technology'])
 
     def test_pull_into_a_0_20_workspace_is_refused_plainly(self):
         import sdem_desnre as d

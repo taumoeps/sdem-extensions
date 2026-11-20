@@ -626,7 +626,7 @@ def model_for(ws, name, environment='production', scale=0.5, need_mark=True):
         stack = getattr(api, 'layers_in_use', lambda w: None)(ws)
     with as_019(ws) as w:   # DL-23: a 0.20 workspace built as the site's four plates, then Data put on a plate of its own
         model = _model_for(w, name, environment, scale, need_mark)
-        data_ids = _data_ids(w) if stack and any(l['id'] == 'data' for l in stack) else None
+        data_ids = _data_ids(w) if stack else None
     if stack: model['workspace']['stack'] = stack
     if data_ids is not None:
         split_data_plate(model, data_ids, stack)
@@ -650,26 +650,38 @@ def _data_ids(ws):
 
 
 def split_data_plate(model, data_ids, stack):
-    """SDEM 0.20 on the Metamodel view: Data's records on a plate of their own — business, BIAN, data, application, technology. A zone of the
-    Application plate that holds only data moves with its records; a data record in a zone shared with application records stays without
-    one on the Data plate. The model then names its plates (layers, zoneLayer: technology's network zones are on the last)."""
+    """SDEM 0.20 on the Metamodel view: the model built as the site's four plates (business, BIAN, application with its data, technology)
+    laid out as the design's own layers — Data's records on a plate of their own, and BIAN's plate only where the design has BIAN. A zone of
+    the Application plate that holds only data moves with its records; a data record in a zone shared with application records stays
+    without one on the Data plate. The model then names its plates (layers, zoneLayer: technology's network zones)."""
     nodes, zones = model['nodes'], model['zones']
+    ids = [l['id'] for l in stack]; pos = {i: k for k, i in enumerate(ids)}
     keys = lambda z: {z[0], 'G:' + str(z[0])} | ({z[5], 'R:' + str(z[5])} if len(z) > 5 and z[5] else set())
     members = lambda z: [n for n in nodes if n[2] == 2 and len(n) > 7 and n[7] in keys(z)]
     to_data, to_app = [], []
     for z in zones[2]:
         m = members(z)
-        (to_data if m and all(n[0] in data_ids for n in m) else to_app).append(z)
+        (to_data if 'data' in pos and m and all(n[0] in data_ids for n in m) else to_app).append(z)
     moved = set().union(*[keys(z) for z in to_data]) if to_data else set()
+    if 'bian' not in pos and any(n[2] == 1 for n in nodes):
+        raise PublishError('the design has no BIAN layer, but records were drawn on its plate')
     for n in nodes:
-        if n[2] == 2:
-            if n[0] in data_ids:
+        old = n[2]
+        if old == 2:
+            if n[0] in data_ids and 'data' in pos:
+                n[2] = pos['data']
                 if len(n) > 7 and n[7] and n[7] not in moved: n[7] = None   # its zone stays on the Application plate
-            else: n[2] = 3
-        elif n[2] == 3: n[2] = 4
-    model['zones'] = [zones[0], zones[1], to_data, to_app, zones[3]]
+            else: n[2] = pos['application']
+        else: n[2] = pos[{0: 'business', 1: 'bian', 3: 'technology'}[old]]
+    new = [[] for _ in ids]
+    new[pos['business']] = zones[0]
+    if 'bian' in pos: new[pos['bian']] = zones[1]
+    if 'data' in pos: new[pos['data']] = to_data
+    new[pos['application']] = to_app
+    new[pos['technology']] = zones[3]
+    model['zones'] = new
     model['layers'] = [{'code': l['code'], 'name': PLATE_LOOK.get(l['id'], (l['name'],))[0], 'sub': PLATE_LOOK.get(l['id'], ('', ''))[1], 'color': PLATE_LOOK.get(l['id'], ('', '', '#9aa0a6'))[2]} for l in stack]
-    model['zoneLayer'] = len(stack) - 1
+    model['zoneLayer'] = pos['technology']
     return model
 
 

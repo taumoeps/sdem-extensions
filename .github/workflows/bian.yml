@@ -4,9 +4,9 @@ name: BIAN extension against SDEM
 # never skipped (SDEM_REQUIRED=1). Its data must equal SDEM's built-in copy while that fallback exists (BP-11).
 on:
   push:
-    paths: ['metamodel/bian/**', '.github/workflows/bian.yml']
+    paths: ['metamodel/bian/**', '.github/workflows/bian.yml', '.gitattributes']
   pull_request:
-    paths: ['metamodel/bian/**', '.github/workflows/bian.yml']
+    paths: ['metamodel/bian/**', '.github/workflows/bian.yml', '.gitattributes']
   workflow_dispatch:
 
 jobs:

@@ -620,8 +620,14 @@ def model_for(ws, name, environment='production', scale=0.5, need_mark=True):
     """DP-01…DP-04: the gates, then the model with its header, validated. The same workspace always gives the same model (EXT-13)."""
     if not NAME.match(name or ''):
         raise PublishError(f'--name must be lower-case letters, digits and dashes, at most 40 (got {name!r})')
+    stack = None
+    if is_020(ws):   # SDEM 0.20: the design's own layers, as SDEM numbers them — the site labels its plates with them and gives BIAN its own view
+        from sdem import api
+        stack = getattr(api, 'layers_in_use', lambda w: None)(ws)
     with as_019(ws) as w:   # DL-23: a 0.20 workspace as the site's four plates
-        return _model_for(w, name, environment, scale, need_mark)
+        model = _model_for(w, name, environment, scale, need_mark)
+    if stack: model['workspace']['stack'] = stack
+    return model
 
 
 def _model_for(ws, name, environment, scale, need_mark):

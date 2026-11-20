@@ -306,11 +306,14 @@ class Form020Tests(unittest.TestCase):   # SDEM's DL-23: a workspace in the 0.20
         shutil.copytree(EXAMPLE, old, ignore=shutil.ignore_patterns('graph', 'migrations'))
         self.assertTrue(d.is_020(new) and not d.is_020(old))
         a, b = d.model_for(old, 'pi-check', need_mark=False), d.model_for(new, 'pi-check', need_mark=False)
-        ids = lambda m: [n['id'] if isinstance(n, dict) else n for n in m['nodes']]
+        ids = lambda m: [n['id'] if isinstance(n, dict) else n[0] for n in m['nodes']]   # a node is [id, label, plate, …]
         edges = lambda m: sorted(json.dumps([ids(m)[int(e[0])], ids(m)[int(e[1])], *e[2:]]) for e in m['edges'])
         self.assertEqual(edges(a), edges(b))   # the same links — a few in another order
-        for m in (a, b): m.pop('edges'); m['source'].pop('workspace', None); m.pop('workspace', None)
-        self.assertEqual(json.dumps(a, sort_keys=True), json.dumps(b, sort_keys=True))
+        self.assertEqual(sorted(ids(a)), sorted(ids(b)))   # the same records
+        self.assertEqual([l['code'] for l in b['layers']], ['A1', 'A2', 'A3', 'A4', 'A5'])   # SDEM 0.20: five plates, Data of its own
+        self.assertEqual(len(b['zones']), 5); self.assertEqual(b['zoneLayer'], 4); self.assertNotIn('layers', a)
+        on_data = {n[0] for n in b['nodes'] if n[2] == 2}
+        self.assertEqual(on_data, d._data_ids(EXAMPLE) & set(ids(b)))   # exactly the drawn data records on the Data plate
         self.assertFalse(list(new.glob('a1-business.json')))   # the workspace itself only read
 
     def test_pull_into_a_0_20_workspace_is_refused_plainly(self):

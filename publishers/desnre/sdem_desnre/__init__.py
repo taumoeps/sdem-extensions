@@ -624,9 +624,52 @@ def model_for(ws, name, environment='production', scale=0.5, need_mark=True):
     if is_020(ws):   # SDEM 0.20: the design's own layers, as SDEM numbers them — the site labels its plates with them and gives BIAN its own view
         from sdem import api
         stack = getattr(api, 'layers_in_use', lambda w: None)(ws)
-    with as_019(ws) as w:   # DL-23: a 0.20 workspace as the site's four plates
+    with as_019(ws) as w:   # DL-23: a 0.20 workspace built as the site's four plates, then Data put on a plate of its own
         model = _model_for(w, name, environment, scale, need_mark)
+        data_ids = _data_ids(w) if stack and any(l['id'] == 'data' for l in stack) else None
     if stack: model['workspace']['stack'] = stack
+    if data_ids is not None:
+        split_data_plate(model, data_ids, stack)
+        errs = validate({k: v for k, v in model.items() if k != 'workspace'})
+        if errs: raise PublishError('the five-plate model does not match its schema:\n  ' + '\n  '.join(errs[:10]))
+    return model
+
+
+DATA_TYPES = ('A3.DataEntity', 'A3.DataAttribute')
+PLATE_LOOK = {'business': ('Business Architecture', 'the business view', '#e3b667'), 'bian': ('Service Domains', 'the BIAN service domains', '#dba3e3'),
+              'data': ('Data Architecture', 'the data objects and their fields', '#7fd3cf'), 'application': ('Application Architecture', 'the components and their flows', '#86b9f5'),
+              'technology': ('Technology Architecture', 'where the software runs', '#84d39f')}
+
+
+def _data_ids(ws):
+    """The records of the Data layer in a workspace written in 0.19's form: data entities and attributes, and a profile's types that extend them."""
+    d = json.loads((Path(ws) / 'a3-application.json').read_text(encoding='utf-8')) if (Path(ws) / 'a3-application.json').exists() else {}
+    prof = json.loads((Path(ws) / 'sdem-profile.json').read_text(encoding='utf-8')) if (Path(ws) / 'sdem-profile.json').exists() else {}
+    ext = {t.get('type') for t in prof.get('types', []) if any(e in DATA_TYPES for e in ([t.get('extends')] if isinstance(t.get('extends'), str) else t.get('extends') or []))}
+    return {i['id'] for i in d.get('instances', []) if i.get('type') in DATA_TYPES or i.get('type') in ext}
+
+
+def split_data_plate(model, data_ids, stack):
+    """SDEM 0.20 on the Metamodel view: Data's records on a plate of their own — business, BIAN, data, application, technology. A zone of the
+    Application plate that holds only data moves with its records; a data record in a zone shared with application records stays without
+    one on the Data plate. The model then names its plates (layers, zoneLayer: technology's network zones are on the last)."""
+    nodes, zones = model['nodes'], model['zones']
+    keys = lambda z: {z[0], 'G:' + str(z[0])} | ({z[5], 'R:' + str(z[5])} if len(z) > 5 and z[5] else set())
+    members = lambda z: [n for n in nodes if n[2] == 2 and len(n) > 7 and n[7] in keys(z)]
+    to_data, to_app = [], []
+    for z in zones[2]:
+        m = members(z)
+        (to_data if m and all(n[0] in data_ids for n in m) else to_app).append(z)
+    moved = set().union(*[keys(z) for z in to_data]) if to_data else set()
+    for n in nodes:
+        if n[2] == 2:
+            if n[0] in data_ids:
+                if len(n) > 7 and n[7] and n[7] not in moved: n[7] = None   # its zone stays on the Application plate
+            else: n[2] = 3
+        elif n[2] == 3: n[2] = 4
+    model['zones'] = [zones[0], zones[1], to_data, to_app, zones[3]]
+    model['layers'] = [{'code': l['code'], 'name': PLATE_LOOK.get(l['id'], (l['name'],))[0], 'sub': PLATE_LOOK.get(l['id'], ('', ''))[1], 'color': PLATE_LOOK.get(l['id'], ('', '', '#9aa0a6'))[2]} for l in stack]
+    model['zoneLayer'] = len(stack) - 1
     return model
 
 

@@ -19,8 +19,10 @@
     },
     "environment": {"type": "string"},
     "scale": {"type": "number"},
+    "layers": {"type": "array", "minItems": 4, "maxItems": 5, "items": {"type": "object"}},
+    "zoneLayer": {"type": "integer", "minimum": 0, "maximum": 4},
     "zone_links": {"type": "array", "maxItems": 5000},
-    "zones": {"type": "array", "minItems": 4, "maxItems": 4, "items": {"type": "array"}},
+    "zones": {"type": "array", "minItems": 4, "maxItems": 5, "items": {"type": "array"}},
     "nodes": {"type": "array", "minItems": 1, "maxItems": 2000, "items": {"type": "array", "minItems": 7, "maxItems": 8}},
     "edges": {"type": "array", "maxItems": 10000, "items": {"type": "array", "minItems": 4, "maxItems": 5}}
   }

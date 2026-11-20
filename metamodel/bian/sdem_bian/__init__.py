@@ -4,11 +4,12 @@ It carries BIAN's data: the A2 metamodel, its within-layer rules, link types and
 them from its data folder when it is installed (and supports this SDEM); otherwise SDEM uses its built-in copy, identical for 0.20.
 
     sdem-bian --manifest     what it is, and where its data is (SDEM reads this)
-    sdem-bian <command> …    the same as sdem bian <command> … — SDEM's own commands, which read this package's data
+    sdem-bian <command> …    the same as sdem bian <command> … — this package's own code (sdem_bian/bian.py), through sdem.api
+                             (SDEM runs it for `sdem bian …` too, when this package supports its sdem.api)
 
 Switch BIAN on or off in a workspace — a person's decision: sdem profile include ext:bian / exclude ext:bian.
 """
-import json, shutil, subprocess, sys
+import json, sys
 from pathlib import Path
 
 HERE = Path(__file__).parent
@@ -29,8 +30,9 @@ def entry(argv=None):
         print(f"sdem-bian {MANIFEST['version']}"); return 0
     if argv[:1] in ([], ['-h'], ['--help']):
         print(__doc__.strip()); return 0
-    exe = shutil.which('sdem', path=str(Path(sys.executable).parent)) or shutil.which('sdem') or 'sdem'   # EXT-02: through SDEM's command line
-    return subprocess.call([exe, 'bian', *argv])
+    from sdem import api   # ST-21: the one interface to SDEM's code
+    from .bian import main   # its own `sdem bian` commands (ST-22), run the way SDEM runs its own
+    return api.run('bian', main, argv)
 
 
 if __name__ == '__main__':

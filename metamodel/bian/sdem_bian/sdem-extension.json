@@ -1,20 +1,45 @@
 {
   "name": "bian",
   "command": "sdem-bian",
-  "version": "1.0.0.dev1",
+  "version": "1.0.0.dev2",
   "description": "BIAN Service Domain Architecture — the A2 layer, its types, link types and inference rules, and the BIAN 14 catalogue (banking)",
-  "kind": ["metamodel"],
+  "kind": [
+    "metamodel"
+  ],
   "sdem": ">=0.19,<0.21",
   "metamodel": ">=0.17,<0.18",
-  "scope": {"within": ["A2"], "note": "horizontal: a layer of its own between A1 and A3, the reserved A2 (BX-04, BX-43)"},
-  "uses": ["sdem bian (SDEM's own commands, which read this package's data)"],
-  "reads": ["nothing itself — SDEM reads its data folder"],
+  "scope": {
+    "within": [
+      "A2"
+    ],
+    "note": "horizontal: a layer of its own between A1 and A3, the reserved A2 (BX-04, BX-43)"
+  },
+  "uses": [
+    "sdem.api 0.1 (ST-20, ST-21) — its sdem bian commands run through SDEM's command line (sdem.api.run)"
+  ],
+  "reads": [
+    "nothing itself — SDEM reads its data folder"
+  ],
   "writes": "nothing",
   "sends_to": [],
   "data": "any",
   "owner": "the sdem-extensions maintainers",
   "licence": "Apache-2.0; the BIAN catalogue extract carries its own licence (data/catalogue/LICENSE)",
-  "contract": "SDEM extension contract EXT-01…EXT-15, metamodel extensions MX-01…MX-44, BIAN package BP-01…BP-11 (taumoeps/bian-sdem-framework)",
-  "builds_on": {"types": ["A1.BusinessProcess", "A1.BusinessActivity", "A1.BusinessObject", "A3.ApplicationComponent", "A3.ApplicationService", "A3.APIOperation", "A4.Deployment"],
-                "note": "MX-41: the core types BIAN's link types and inference rules reach"}
+  "contract": "SDEM extension contract EXT-01…EXT-15, metamodel extensions MX-01…MX-44, BIAN package BP-01…BP-11, stable identity ST-20…ST-22 (taumoeps/bian-sdem-framework)",
+  "builds_on": {
+    "types": [
+      "A1.BusinessProcess",
+      "A1.BusinessActivity",
+      "A1.BusinessObject",
+      "A3.ApplicationComponent",
+      "A3.ApplicationService",
+      "A3.APIOperation",
+      "A4.Deployment"
+    ],
+    "note": "MX-41: the core types BIAN's link types and inference rules reach"
+  },
+  "commands": [
+    "bian"
+  ],
+  "api": ">=0.1,<0.2"
 }

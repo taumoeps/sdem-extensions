@@ -43,7 +43,7 @@ class WithSdem(unittest.TestCase):
         out = Path(tempfile.mkdtemp())
         try:
             files = write_package_data(out)
-            differ = [f for f in files if (out / f).read_bytes() != (sdem_bian.DATA / f).read_bytes()]
+            differ = [f for f in files if (out / f).read_bytes() != (sdem_bian.HERE / f).read_bytes()]
             self.assertEqual(differ, [], 'the package and SDEM disagree — regenerate with scripts/bian_package.py, or change both')
         finally:
             shutil.rmtree(out, ignore_errors=True)
@@ -55,6 +55,19 @@ class WithSdem(unittest.TestCase):
         self.assertTrue(p and p.get('data'), p)
         self.assertEqual(Path(p['data']).resolve(), sdem_bian.DATA.resolve())
         self.assertEqual(parts.catalogue_dir().resolve(), (sdem_bian.DATA / 'catalogue').resolve())
+
+    def test_its_code_uses_only_sdem_api(self):   # ST-21: never any other of SDEM's modules
+        import ast
+        for f in sorted(sdem_bian.HERE.glob('*.py')):
+            tree = ast.parse(f.read_text(encoding='utf-8'))
+            used = {n.module if n.module != 'sdem' else f"sdem.{a.name}" for n in ast.walk(tree) if isinstance(n, ast.ImportFrom) and (n.module or '').split('.')[0] == 'sdem' for a in n.names}
+            used |= {a.name for n in ast.walk(tree) if isinstance(n, ast.Import) for a in n.names if a.name.split('.')[0] == 'sdem'}
+            self.assertLessEqual(used, {'sdem.api'}, f.name)
+
+    def test_sdem_runs_its_code_for_sdem_bian(self):   # ST-22
+        from sdem import parts
+        parts._PKG.clear()
+        self.assertTrue(parts.package().get('code'), parts.package())
 
     def test_sdem_bian_runs_sdems_bian_commands(self):   # BP-01
         r = subprocess.run([prog('sdem-bian'), 'search', 'payment', 'rail', '--json'], capture_output=True, text=True, encoding='utf-8')

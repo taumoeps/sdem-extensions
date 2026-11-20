@@ -13,6 +13,6 @@ sdem profile include ext:bian --workspace DIR --person P --reason "a banking des
 - **SDEM reads its data** (`sdem_bian/data/`) when it is installed and supports this SDEM; otherwise SDEM uses its own copy —
   identical for all of 0.20 (BP-10, BP-11), so nothing breaks either way.
 - **`sdem bian …`** works as before; `sdem-bian …` runs the same commands.
-- **Its data is regenerated from SDEM** with `python scripts/bian_package.py <this folder>/sdem_bian/data` while SDEM keeps the
+- **Its data is regenerated from SDEM** with `python scripts/bian_package.py <this folder>/sdem_bian` while SDEM keeps the
   fallback; the tests fail if the two differ.
 - Made-up examples only; the BIAN extract keeps its own licence (`data/catalogue/LICENSE`).

@@ -12,7 +12,7 @@ on its own as `sdem-desnre …`. It uses SDEM only through its command line with
 code. The first `create` of a workspace asks you to confirm it is made-up data, and records who said so. Your token comes from
 the environment (DESNRE_TOKEN) or, on a Mac, the Keychain. The hero page is the site owner's (--hero). Standard library only.
 """
-import argparse, datetime, json, math, os, re, shlex, shutil, subprocess, sys, urllib.error, urllib.request, webbrowser
+import argparse, contextlib, datetime, json, math, os, re, shlex, shutil, subprocess, sys, tempfile, urllib.error, urllib.request, webbrowser
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -582,10 +582,44 @@ def health(st):
     return {k: st[k] for k in keep if k in st}
 
 
+def is_020(ws):
+    """A workspace in SDEM 0.20's form: its layer files named by layer (business.json, data.json, application.json …)."""
+    p = Path(ws)
+    return not (p / 'a1-business.json').exists() and any((p / f'{l}.json').exists() for l in ('business', 'data', 'application'))
+
+
+def is_workspace(ws):
+    return Path(ws, 'a1-business.json').exists() or is_020(ws)
+
+
+@contextlib.contextmanager
+def as_019(ws):
+    """DL-23 (SDEM's data-layer spec): a workspace in SDEM 0.20's form is published as 0.19 held it — the four plates the site draws,
+    Data inside Application as its Architecture view shows it (A3-1 Data, A3-2 Application). SDEM writes that copy (sdem.api.export_019);
+    the workspace itself is only read. A five-plate model is the site's to decide."""
+    if not is_020(ws):
+        yield ws; return
+    try:
+        from sdem import api
+        export = api.export_019
+    except (ImportError, AttributeError):
+        raise PublishError(f'{ws} is in SDEM 0.20\'s form, and this SDEM cannot write it in 0.19\'s (sdem.api.export_019) — upgrade SDEM')
+    tmp = Path(tempfile.mkdtemp()); out = tmp / Path(ws).resolve().name
+    try:
+        export(ws, out); yield out
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
 def model_for(ws, name, environment='production', scale=0.5, need_mark=True):
     """DP-01…DP-04: the gates, then the model with its header, validated. The same workspace always gives the same model (EXT-13)."""
     if not NAME.match(name or ''):
         raise PublishError(f'--name must be lower-case letters, digits and dashes, at most 40 (got {name!r})')
+    with as_019(ws) as w:   # DL-23: a 0.20 workspace as the site's four plates
+        return _model_for(w, name, environment, scale, need_mark)
+
+
+def _model_for(ws, name, environment, scale, need_mark):
     v, mm = gates(ws, need_mark)
     body = build(ws, scale, environment=environment)
     model = {'format': 'desnre-model', 'format_version': 1, 'name': name, 'data': 'synthetic',
@@ -760,8 +794,8 @@ def cmd_whoami(a):
 
 def cmd_create(a):
     ws = a.workspace
-    if not Path(ws, 'a1-business.json').exists():
-        raise PublishError(f'{ws} is not an SDEM workspace (no a1-business.json)')
+    if not is_workspace(ws):
+        raise PublishError(f'{ws} is not an SDEM workspace (no layer files: a1-business.json, or business.json in the 0.20 form)')
     name = a.name or name_of(ws)
     target = None if a.dry_run else Target(a)   # signed in before anything is built
     if a.dry_run:
@@ -888,8 +922,11 @@ def cmd_pull(a):
     workspace records each change and its impact as usual — then marked pulled on the site. Stops at the first one SDEM refuses."""
     import tempfile
     ws = a.workspace
-    if not Path(ws, 'a1-business.json').exists():
-        raise PublishError(f'{ws} is not an SDEM workspace (no a1-business.json)')
+    if not is_workspace(ws):
+        raise PublishError(f'{ws} is not an SDEM workspace (no layer files: a1-business.json, or business.json in the 0.20 form)')
+    if is_020(ws):   # DL-23: the workbench's changes speak the site's four plates — applying them to a 0.20 workspace comes later
+        raise PublishError(f'{ws} is in SDEM 0.20\'s form: pulling the workbench\'s changes into it is not supported yet — '
+                           'publishing works (as 0.19 held it); apply the changes with sdem change propose meanwhile')
     tok, me = signed_in(a.site)
     name = a.name or name_of(ws)
     items = call('GET', f"/api/u/{me['username']}/{name}/changes", tok, None, a.site).get('items', [])

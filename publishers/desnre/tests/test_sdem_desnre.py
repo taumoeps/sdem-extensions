@@ -13,7 +13,8 @@ import sdem_desnre as X   # noqa: E402
 from fake_site import Site   # noqa: E402
 
 SDEM = Path(os.environ.get('SDEM_HOME') or next((d / 'bian-sdem-framework' for d in HERE.parents if (d / 'bian-sdem-framework').is_dir()), HERE.parents[2] / 'bian-sdem-framework'))   # an SDEM checkout beside this repository, however deep the extension sits
-EXAMPLE = SDEM / 'examples' / 'payment-initiation'
+EXAMPLE = SDEM / 'examples' / 'payment-initiation'   # 0.19's form, as the site's four plates and pull know it
+EXAMPLE_NOW = SDEM / 'examples' / '0.20' / 'payment-initiation'   # SDEM 0.20: the same example migrated (DL-D9, opt-in)
 
 
 def run(*argv):
@@ -235,10 +236,10 @@ class ExtensionTests(unittest.TestCase):
             self.assertEqual(code, 0, err); self.assertIn('already in the workspace', text); self.assertEqual(site.changes[1]['status'], 'pulled')
 
 
-    def test_supports_sdem_018_and_019(self):   # desnre 0.7.0: SDEM 0.18 (metamodel 0.14) and 0.19 (metamodel 0.17)
-        for v in ('0.18.0', '0.19.0'): self.assertTrue(X.in_range(v, X.MANIFEST['sdem']), v)
+    def test_supports_sdem_018_to_020(self):   # desnre 0.7.0: SDEM 0.18 and 0.19; 0.9.0: 0.20 too (a 0.20 workspace published as 0.19 held it, DL-23)
+        for v in ('0.18.0', '0.19.0', '0.20.0'): self.assertTrue(X.in_range(v, X.MANIFEST['sdem']), v)
         for v in ('0.14.0', '0.17.0'): self.assertTrue(X.in_range(v, X.MANIFEST['metamodel']), v)
-        self.assertFalse(X.in_range('0.20.0', X.MANIFEST['sdem']))
+        self.assertFalse(X.in_range('0.21.0', X.MANIFEST['sdem']))
 
     def test_a_full_design_builds_without_its_fields_and_locations(self):   # SDEM 0.19: fields and locations are in the workspace, not drawn
         v2 = SDEM / 'examples' / 'payment-initiation-v2'
@@ -283,3 +284,38 @@ class DraftTests(unittest.TestCase):   # desnre 0.7.4: the draft is drawn — li
 
 if __name__ == '__main__':
     unittest.main()
+
+
+
+@unittest.skipUnless((EXAMPLE_NOW / 'business.json').exists(), "needs SDEM 0.20's example (in the 0.20 form) next to this repository")
+class Form020Tests(unittest.TestCase):   # SDEM's DL-23: a workspace in the 0.20 form, published as 0.19 held it
+    @classmethod
+    def setUpClass(cls):
+        os.environ.setdefault('SDEM_CMD', f'env PYTHONPATH={SDEM} {sys.executable} -m sdem')
+        sys.path.insert(0, str(SDEM))
+        cls.tmp = Path(tempfile.mkdtemp(prefix='sdem-desnre-020-'))
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(cls.tmp, ignore_errors=True)
+
+    def test_the_same_design_gives_the_same_model_in_either_form(self):
+        import sdem_desnre as d
+        new, old = self.tmp / 'payment-initiation', self.tmp / 'old' / 'payment-initiation'
+        shutil.copytree(EXAMPLE_NOW, new, ignore=shutil.ignore_patterns('graph', 'migrations'))
+        shutil.copytree(EXAMPLE, old, ignore=shutil.ignore_patterns('graph', 'migrations'))
+        self.assertTrue(d.is_020(new) and not d.is_020(old))
+        a, b = d.model_for(old, 'pi-check', need_mark=False), d.model_for(new, 'pi-check', need_mark=False)
+        ids = lambda m: [n['id'] if isinstance(n, dict) else n for n in m['nodes']]
+        edges = lambda m: sorted(json.dumps([ids(m)[int(e[0])], ids(m)[int(e[1])], *e[2:]]) for e in m['edges'])
+        self.assertEqual(edges(a), edges(b))   # the same links — a few in another order
+        for m in (a, b): m.pop('edges'); m['source'].pop('workspace', None); m.pop('workspace', None)
+        self.assertEqual(json.dumps(a, sort_keys=True), json.dumps(b, sort_keys=True))
+        self.assertFalse(list(new.glob('a1-business.json')))   # the workspace itself only read
+
+    def test_pull_into_a_0_20_workspace_is_refused_plainly(self):
+        import sdem_desnre as d
+        ws = self.tmp / 'pull'; shutil.copytree(EXAMPLE_NOW, ws, ignore=shutil.ignore_patterns('graph', 'migrations'))
+        with self.assertRaises(d.PublishError) as e:
+            d.cmd_pull(type('A', (), {'workspace': str(ws), 'site': None, 'name': None})())
+        self.assertIn("0.20", str(e.exception))

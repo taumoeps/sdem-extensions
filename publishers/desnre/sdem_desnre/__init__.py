@@ -329,6 +329,11 @@ def build(ws, scale, topology=True, environment='production'):
     for f in FILES:
         with open(os.path.join(ws, f), encoding='utf-8') as fh:
             exists |= {i['id'] for i in json.load(fh).get('instances', [])}
+    for f in sorted(Path(ws).glob('*.json')):   # desnre 0.9: a metamodel extension's records (security.json) — in the workspace, shown in its own
+        if f.name in FILES: continue          # viewpoint and tab, not on the Architecture plates: its links are not drawn either
+        try: d = json.loads(f.read_text(encoding='utf-8'))
+        except ValueError: continue
+        if isinstance(d, dict) and isinstance(d.get('instances'), list): exists |= {i['id'] for i in d['instances'] if isinstance(i, dict) and 'id' in i}
     for a, b, ok, rel, imp in inner + cross:
         if a not in idx or b not in idx:
             if a in exists and b in exists: continue   # SDEM 0.19: a field or a location is in the workspace but not drawn — its links are not either

@@ -14,7 +14,7 @@ Offline: it reads the base, a pack, or a folder you downloaded. BIAN's descripti
 """
 from sdem.api import for_file as _for_file  # DL-11: what a design's file stores (docs/design/sdem-data-layer-spec.md)
 from sdem.api import load as _jload  # DL-11: a design's files read through one boundary (docs/design/sdem-data-layer-spec.md)
-from sdem.api import T as _T, layer as _L  # ST-01…ST-05: layers and types by id (docs/design/sdem-stable-identity-spec.md)
+from sdem.api import T as _T, layer as _L, F as _F  # ST-01…ST-05: layers and types by id (docs/design/sdem-stable-identity-spec.md)
 import argparse, csv, difflib, json, re, sys
 from collections import Counter
 from pathlib import Path
@@ -451,7 +451,7 @@ def compare(previous, dataset):
 def report_md(dataset, report, refused, warnings, changes=None, descriptions=False, source='the BIAN files you downloaded'):
     c = Counter(i['type'] for i in dataset['instances'])
     L = [f"# BIAN import — {dataset['source_system']}", '',
-         f"{len(dataset['instances'])} records, {len(dataset['relationships'])} links inside A2, from BIAN's Semantic API release {dataset['model_version']}. "
+         f"{len(dataset['instances'])} records, {len(dataset['relationships'])} links inside {_L('bian')}, from BIAN's Semantic API release {dataset['model_version']}. "
          f'Read from {source}; nothing was fetched. ' + ('BIAN descriptions included (--descriptions).' if descriptions else 'BIAN descriptions left out.'), '',
          '| Kind | Records |', '|---|---|'] + [f'| {t} | {n} |' for t, n in sorted(c.items())]
     L += ['', '## Asset type and functional pattern — confirm', '',
@@ -463,7 +463,7 @@ def report_md(dataset, report, refused, warnings, changes=None, descriptions=Fal
         L += ['', '## Control records with the same name', '', "BIAN's files give these service domains the same control record name; each domain keeps its own record (the metamodel allows one domain per control record). Check with BIAN which is intended.", '']
         L += [f"- `{n}`: {', '.join(ds)}" for n, ds in report['shared_control_records']]
     if changes:
-        L += ['', '## Against the previous A2 dataset', '', f"Added {len(changes['added'])} · dropped {len(changes['dropped'])} · renamed {len(changes['renamed'])}. "
+        L += ['', f'## Against the previous {_L("bian")} dataset', '', f"Added {len(changes['added'])} · dropped {len(changes['dropped'])} · renamed {len(changes['renamed'])}. "
               'A dropped record is **not** removed from your workspace — check whether approved links point to it.', '']
         L += [f'- dropped: `{i}`' for i in changes['dropped']] + [f'- renamed: `{i}` {a!r} → {b!r}' for i, a, b in changes['renamed']]
     if warnings:
@@ -497,12 +497,12 @@ def update_estates(estates, a2_file, person, dry_run=False, now=None):
     from sdem.api import is_person
     if not is_person(person): raise BianError(f"--person {person!r}: updating a workspace's BIAN layer is a person's decision — give your own name")
     new = _jload(Path(a2_file))
-    if new.get('level') != _L('bian'): raise BianError(f'{a2_file}: not an A2 dataset (level {new.get("level")!r})')
+    if new.get('level') != _L('bian'): raise BianError(f'{a2_file}: not an {_L("bian")} dataset (level {new.get("level")!r})')
     new_by = {i['id']: i for i in new.get('instances', [])}
     plans, refused = [], []
     for est in estates:
         docs, reg = estate_docs(est)
-        old = docs.get('a2-service-domain.json') or {'instances': []}
+        old = docs.get(_F('bian')) or {'instances': []}
         old_by = {i['id']: i for i in old.get('instances', [])}
         change = {'estate': str(est), 'added': sorted(set(new_by) - set(old_by)), 'dropped': sorted(set(old_by) - set(new_by)),
                   'renamed': sorted([i, old_by[i]['name'], new_by[i]['name']] for i in set(old_by) & set(new_by) if old_by[i]['name'] != new_by[i]['name'])}
@@ -511,7 +511,7 @@ def update_estates(estates, a2_file, person, dry_run=False, now=None):
                 if m.get('status') == 'approved' and ({m['source']['id'], m['target']['id']} & set(change['dropped']))]
         if lost:
             refused.append(f"{est}: approved connection(s) point to BIAN records that would disappear — supersede them first: " + '; '.join(lost)); continue
-        errors = [] if change['unchanged'] else estate_errors({**docs, 'a2-service-domain.json': new}, reg)
+        errors = [] if change['unchanged'] else estate_errors({**docs, _F('bian'): new}, reg)
         if errors:
             refused.append(f'{est}: would not pass its checks with the new BIAN layer:\n    ' + '\n    '.join(errors[:8])); continue
         plans.append(change)
@@ -524,7 +524,7 @@ def update_estates(estates, a2_file, person, dry_run=False, now=None):
             est = Path(c['estate']); folder = est / 'bian-updates'
             n = 1 + max([int(p.stem.split('-')[1]) for p in folder.glob('BU-*.json')] or [0]) if folder.exists() else 1
             c['id'] = f'BU-{n:03d}'
-            b.json(est / 'a2-service-domain.json', new)
+            b.json(est / _F('bian'), new)
             b.json(folder / f"{c['id']}.json", {'id': c['id'], 'at': now or datetime.datetime.now().replace(microsecond=0).isoformat(), 'person': person,
                                                 'from': str(a2_file), 'source_system': new.get('source_system'), 'model_version': new.get('model_version'),
                                                 **{k: c[k] for k in ('added', 'dropped', 'renamed')}})
@@ -539,7 +539,7 @@ def release_impact(estate, shared):
     has are listed too (an update keeps them as they are): they are what a person must review."""
     from sdem.api import estate_docs
     est = Path(estate); docs, reg = estate_docs(est)
-    own = docs.get('a2-service-domain.json') or {'instances': [], 'relationships': []}
+    own = docs.get(_F('bian')) or {'instances': [], 'relationships': []}
     held = {i['name'] for i in own.get('instances', []) if i['type'] == _T('bian.ServiceDomain')}
     fresh = refresh_layer(own, shared, held) if held else own
     old_by, new_by = {i['id']: i for i in own.get('instances', [])}, {i['id']: i for i in fresh.get('instances', [])}
@@ -665,8 +665,8 @@ def main(argv=None):
     if argv[:1] == ['inference']:   # SDEM's record of inferred asset types and patterns (DA2-03)
         from .inferences import commands
         return commands(argv[1:])
-    ap = argparse.ArgumentParser(prog='sdem bian', description="The BIAN (A2) layer from BIAN's public Semantic APIs (github.com/bian-official/public, Apache-2.0): "
-                                 'list what a downloaded release holds; import the service domains you choose as a checked A2 dataset.',
+    ap = argparse.ArgumentParser(prog='sdem bian', description=f"The BIAN ({_L('bian')}) layer from BIAN's public Semantic APIs (github.com/bian-official/public, Apache-2.0): "
+                                 f'list what a downloaded release holds; import the service domains you choose as a checked {_L("bian")} dataset.',
                                  epilog='Examples:\n  sdem bian list ~/bian/release14.0.0\n'
                                         '  sdem bian import ~/bian/release14.0.0 --only "Payment Order Initiation" "Payment Execution" -o work/bian/a2-service-domain.json',
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -678,7 +678,7 @@ def main(argv=None):
     ls.add_argument('--json', action='store_true')
     pk = sub.add_parser('pack', help='pack a folder of BIAN-format files into one file — your own base')
     pk.add_argument('folder'); pk.add_argument('-o', '--out', required=True, metavar='FILE')
-    im = sub.add_parser('import', parents=[src], help='write an A2 dataset for the service domains you choose — checked first')
+    im = sub.add_parser('import', parents=[src], help=f'write an {_L("bian")} dataset for the service domains you choose — checked first')
     im.add_argument('-o', '--out', required=True, metavar='FILE')
     im.add_argument('--only', nargs='+', metavar='NAME', help='service domains by name (or file name)')
     im.add_argument('--from', dest='from_file', metavar='FILE', help='a file of service-domain names, one per line')
@@ -689,7 +689,7 @@ def main(argv=None):
     im.add_argument('--descriptions', action='store_true', help="include BIAN's descriptions (left out by default)")
     im.add_argument('--objects', action='store_true', help='also write BIAN business objects (many)')
     im.add_argument('--object', action='append', metavar='NAME', help="only this business object (repeat; BIAN's name or its words) — implies --objects")
-    im.add_argument('--previous', metavar='FILE', help='a previous A2 dataset: report what was added, dropped or renamed')
+    im.add_argument('--previous', metavar='FILE', help=f'a previous {_L("bian")} dataset: report what was added, dropped or renamed')
     im.add_argument('--json', action='store_true')
     sub.add_parser('inference', help="SDEM's record of inferred asset types and functional patterns — list, show, accept, challenge, change, reject")
     def _ws_change(p):   # WS-04: what adding, selecting and the old `custom` share
@@ -762,10 +762,10 @@ def main(argv=None):
             if f: infer = accepted(read_inferences(f))
         dataset, _ = build(chosen, Metamodel.load().version, False, getattr(a, 'objects', False), patterns, infer)
         if a.add:   # WS-04: added beside what the workspace holds (what AID inferred keeps its mark)
-            own = _jload(ws / 'a2-service-domain.json') if (ws / 'a2-service-domain.json').exists() else {**dataset, 'instances': [], 'relationships': []}
+            own = _jload(ws / _F('bian')) if (ws / _F('bian')).exists() else {**dataset, 'instances': [], 'relationships': []}
             dataset = merge_layers(own, dataset)
         import tempfile
-        tmp = Path(tempfile.mkdtemp()) / 'a2-service-domain.json'; tmp.write_text(json.dumps(_for_file(tmp, dataset)), encoding='utf-8')
+        tmp = Path(tempfile.mkdtemp()) / _F('bian'); tmp.write_text(json.dumps(_for_file(tmp, dataset)), encoding='utf-8')
         try: plans = update_estates([ws], tmp, a.person, a.dry_run)
         except BianRefused as e: print(f'ERROR: {e}', file=sys.stderr); return 1
         c = plans[0]
@@ -801,13 +801,13 @@ def main(argv=None):
         for r in res:
             print(f"{r['service_domain']}  ({r['id']}, {r['operations_total']} operations; control record {r['control_record'] or '—'})  matched: {', '.join(r['matched'])}")
             for o in r['operations']: print(f"    {o['id']:<64} {o['method'] or ''} {o['path'] or ''}")
-        print("use the SO-… ids in a business process's or activity's invokes; sdem aid then brings these domains into A2")
+        print(f"use the SO-… ids in a business process's or activity's invokes; sdem aid then brings these domains into {_L('bian')}")
         return 0
     if a.cmd == 'impact':   # MS-08
         estates = [Path(a.estate)] if a.estate else sorted(p for p in Path(a.root).iterdir() if (p / 'mappings.json').exists())
         if not estates: raise BianError(f'{a.root}: no workspaces in it (folders with a mappings.json)')
         shared = _jload(Path(a.a2))
-        if shared.get('level') != _L('bian'): raise BianError(f'{a.a2}: not an A2 dataset (level {shared.get("level")!r})')
+        if shared.get('level') != _L('bian'): raise BianError(f'{a.a2}: not an {_L("bian")} dataset (level {shared.get("level")!r})')
         res = [release_impact(e, shared) for e in estates]
         if a.json: print(json.dumps({'workspaces': res}, indent=2, ensure_ascii=False)); return 0
         for r in res:
@@ -823,19 +823,19 @@ def main(argv=None):
         estates = [Path(a.estate)] if a.estate else sorted(p for p in Path(a.root).iterdir() if (p / 'mappings.json').exists())
         if not estates: raise BianError(f'{a.root}: no workspaces in it (folders with a mappings.json)')
         shared = _jload(Path(a.a2))
-        if shared.get('level') != _L('bian'): raise BianError(f'{a.a2}: not an A2 dataset (level {shared.get("level")!r})')
+        if shared.get('level') != _L('bian'): raise BianError(f'{a.a2}: not an {_L("bian")} dataset (level {shared.get("level")!r})')
         from sdem.api import is_person
         if not is_person(a.person): raise BianError(f"--person {a.person!r}: updating a workspace's BIAN layer is a person's decision — give your own name")
         import tempfile
         plans = []
         for e in estates:   # WS-04: each workspace refreshes the service domains it holds — nothing else is brought in
-            own = _jload(e / 'a2-service-domain.json') if (e / 'a2-service-domain.json').exists() else None
+            own = _jload(e / _F('bian')) if (e / _F('bian')).exists() else None
             held = {i['name'] for i in (own or {}).get('instances', []) if i['type'] == _T('bian.ServiceDomain')}
             if not held: print(f"{e}: holds no BIAN service domains — nothing to refresh (sdem aid brings in the ones its design needs)"); continue
             gone = sorted(held - {i['name'] for i in shared['instances'] if i['type'] == _T('bian.ServiceDomain')})
             if gone: print(f"{e}: {len(gone)} service domain(s) it holds are not in the shared layer — kept as they are: {', '.join(gone)}")
             fresh = refresh_layer(own, shared, held)
-            tmp = Path(tempfile.mkdtemp()) / 'a2-service-domain.json'; tmp.write_text(json.dumps(_for_file(tmp, fresh)), encoding='utf-8')
+            tmp = Path(tempfile.mkdtemp()) / _F('bian'); tmp.write_text(json.dumps(_for_file(tmp, fresh)), encoding='utf-8')
             try: plans += update_estates([e], tmp, a.person, a.dry_run)
             except BianRefused as err: print(f'ERROR: {err}', file=sys.stderr); return 1
         if not plans: return 0
@@ -892,7 +892,7 @@ def main(argv=None):
     if unknown: rep['template'] = template.name
     errors, warnings = check(dataset)
     if errors:
-        print('ERROR: refused — the A2 dataset would not pass the metamodel; nothing written:', file=sys.stderr)
+        print(f'ERROR: refused — the {_L("bian")} dataset would not pass the metamodel; nothing written:', file=sys.stderr)
         for e in errors[:20]: print(f'  {e}', file=sys.stderr)
         return 1
     changes = compare(_jload(Path(a.previous)), dataset) if a.previous else None

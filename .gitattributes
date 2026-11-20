@@ -1,2 +1,4 @@
 # sdem-bian data: byte for byte as SDEM ships it, on every platform — its test compares the two (BP-11)
 metamodel/bian/sdem_bian/data/** -text
+metamodel/bian/sdem_bian/bian.py -text
+metamodel/bian/sdem_bian/inferences.py -text

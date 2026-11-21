@@ -68,7 +68,7 @@ def in_range(v, spec):
 
 def sdem_version(ws):
     r = run_sdem(ws, ['--version'])
-    m = re.search(r'(\d+\.\d+\.\d+)', r.stdout + r.stderr)
+    m = re.search(r'(\d+\.\d+\.\d+(?:\.dev\d+)?)', r.stdout + r.stderr)   # a development build keeps its .devN (UF-03)
     if r.returncode != 0 or not m:
         raise PublishError(f'could not read SDEM\'s version: {(r.stderr or r.stdout).strip()[-200:]}')
     return m.group(1)

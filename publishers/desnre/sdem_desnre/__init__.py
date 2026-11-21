@@ -414,18 +414,45 @@ def carry_packs(files, profile_files):
     files['sdem-profile.json'] = {**prof, 'includes': incs}
 
 
-EXT_RESULTS = {'security': ('review', 'coverage', 'threats')}
-EXT_DOCUMENTS = {'security': 'document'}   # 0.7.9: a Markdown report an extension writes, shown under the layer's Document Output   # 0.7.8: what a metamodel extension's own commands report, published with the design
+DOCUMENT = 'document'   # the one report written as Markdown (shown under the layer's Document Output); every other is JSON
+GUIDE_MAX = 2000         # XA-02: an agent guide's length; a longer one is cut, with a note (XA-06)
+_MANIFESTS = {}
+
+
+def manifest(ws, name):
+    """An installed extension's manifest (`sdem-<name> --manifest`), read once; {} when it is not installed or does not answer."""
+    if name not in _MANIFESTS:
+        try:
+            m = run_sdem(ws, [name, '--manifest']); _MANIFESTS[name] = (json.loads(m.stdout) if m.returncode == 0 else {}) or {}
+        except (subprocess.TimeoutExpired, OSError, ValueError): _MANIFESTS[name] = {}
+    return _MANIFESTS[name]
+
+
+def reports(man):
+    """XA-01: the read-only reports an extension declares — its manifest's viewer `results` (or a top-level `results`). Only names: a
+    name that could be read as an option or a path is ignored."""
+    rs = ((man.get('viewer') or {}).get('results') or man.get('results') or [])
+    return [x for x in rs if isinstance(x, str) and re.fullmatch(r'[a-z][a-z0-9-]{0,39}', x)]
+
+
+def agent_guide(man):
+    """XA-02, XA-06: the extension's short description of its subject for the AI agent — plain text, at most GUIDE_MAX characters."""
+    g = man.get('agent_guide')
+    if not isinstance(g, str) or not g.strip(): return None
+    g = g.strip()
+    return g if len(g) <= GUIDE_MAX else g[:GUIDE_MAX].rstrip() + ' … (cut: a guide is at most 2,000 characters, XA-06)'
 
 
 def extension_results(ws, files):
-    """The results of each included metamodel extension's read-only commands (e.g. `sdem security review --json`), run here where the
-    extension is installed, so the site's agent can quote them without the extension. An extension not installed, or a command that
-    fails, is left out — the design still publishes. The workspace's local path is never sent."""
+    """XA-03: the results of each included extension's read-only reports, as its own manifest declares them (e.g. `sdem security review
+    --json`), run here where the extension is installed, so the site's agent can quote them without the extension. No extension is named
+    here. An extension not installed, or a command that fails or hangs, is left out — the design still publishes (AUD-30). The
+    workspace's local path is never sent."""
     out = {}
     incl = [i[4:] for i in ((files.get('sdem-profile.json') or {}).get('includes') or []) if isinstance(i, str) and i.startswith('ext:')]
     for name in incl:
-        for cmd in EXT_RESULTS.get(name, ()):
+        cmds = reports(manifest(ws, name))
+        for cmd in (c for c in cmds if c != DOCUMENT):
             try: r = run_sdem(ws, [name, cmd, '--workspace', str(ws), '--json'])
             except (subprocess.TimeoutExpired, OSError): continue   # AUD-30: a command that hangs or cannot start is left out — the design still publishes
             try: d = json.loads(r.stdout) if r.returncode == 0 else None
@@ -433,8 +460,8 @@ def extension_results(ws, files):
             if isinstance(d, dict):
                 d.pop('workspace', None)
                 out.setdefault(name, {})[cmd] = d
-        if name in EXT_DOCUMENTS:
-            try: r = run_sdem(ws, [name, EXT_DOCUMENTS[name], '--workspace', str(ws)])
+        if DOCUMENT in cmds:
+            try: r = run_sdem(ws, [name, DOCUMENT, '--workspace', str(ws)])
             except (subprocess.TimeoutExpired, OSError): r = None
             if r is not None and r.returncode == 0 and r.stdout.strip(): out.setdefault(name, {})['document'] = no_local_paths(r.stdout, ws)
     return out
@@ -461,12 +488,12 @@ def extension_states(ws, files, results):
     out, now = {}, datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0).isoformat()
     for name in sorted(incl | set(off_d)):
         if name in incl:
-            d, ver = on_d.get(name) or {}, None
-            try:
-                m = run_sdem(ws, [name, '--manifest']); ver = (json.loads(m.stdout) if m.returncode == 0 else {}).get('version')
-            except (subprocess.TimeoutExpired, OSError, ValueError): pass
-            out[name] = {'state': 'on', 'version': ver, 'since': (d.get('at') or '')[:10] or None, 'by': d.get('named_person'), 'decision': d.get('id'),
-                         'results': results.get(name) or {}, 'results_at': now if results.get(name) else None}
+            d, man = on_d.get(name) or {}, manifest(ws, name)
+            out[name] = {'state': 'on', 'version': man.get('version'), 'since': (d.get('at') or '')[:10] or None, 'by': d.get('named_person'), 'decision': d.get('id'),
+                         'results': results.get(name) or {}, 'results_at': now if results.get(name) else None,
+                         **({'description': man['description']} if isinstance(man.get('description'), str) else {}),   # XA-05: what the agent lists
+                         **({'scope': {k: v for k, v in man['scope'].items() if k in ('across', 'within')}} if isinstance(man.get('scope'), dict) else {}),   # MX-18: a layer of its own, or types within one
+                         'reports': reports(man), 'agent_guide': agent_guide(man)}
         else:
             d = off_d[name]; det = d.get('details') or {}
             out[name] = {'state': 'off', 'since': (d.get('at') or '')[:10] or None, 'by': d.get('named_person'), 'reason': det.get('reason'),

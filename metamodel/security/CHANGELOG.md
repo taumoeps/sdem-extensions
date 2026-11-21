@@ -4,6 +4,10 @@ All made-up data. Rule ids: the [security aspect spec](docs/security-aspect-spec
 SDEM's [metamodel extensions](https://github.com/taumoeps/bian-sdem-framework/blob/main/docs/design/sdem-metamodel-extensions-spec.md) (MX-…) and
 [extension lifecycle](https://github.com/taumoeps/bian-sdem-framework/blob/main/docs/design/sdem-extension-lifecycle-spec.md) (EL-…) specs.
 
+## 0.3.1 — 2026-11-22
+
+- **The AI agent's guide is the extension's own** (SDEM's XA-02, XA-07): `agent_guide` in the manifest says what layer S, its links and its reports mean — what the DESNRE site's agent was told in code written for security alone. It names no layer numbers, so it reads the same with or without BIAN. Its reports (review, coverage, threats, document) were already in the manifest; the publisher now runs them from there (XA-01, XA-03).
+
 ## 0.3.0 — 2026-11-21 (with SDEM 0.20.0)
 
 - **A workspace in SDEM 0.20's form** (SDEM's DL-22). Coverage, threats, review and the document read it as 0.19 held it — the copy SDEM writes with `export_019` (Data's records in the Application file, each approved `ACCESSED_BY` as access), proven record by record by SDEM's P2 — the form these rules are written in; records keep their ids, so security's own links hold. Switching security on and off, restoring, purging and proposing go through SDEM's commands on the workspace itself, as before.

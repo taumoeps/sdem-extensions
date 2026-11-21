@@ -42,4 +42,5 @@ jobs:
       - name: The extension's tests (SDEM required — none skipped)
         env:
           SDEM_REQUIRED: '1'
+          SDEM_RELEASED: ${{ matrix.sdem != 'main' && '1' || '' }}   # BP-11 against main only: a package newer than a released SDEM is not its copy
         run: python -m unittest discover -s metamodel/bian/tests -v

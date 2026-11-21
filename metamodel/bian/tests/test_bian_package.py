@@ -38,6 +38,7 @@ class Manifest(unittest.TestCase):
 
 @unittest.skipUnless(HAVE or NEED, 'SDEM is not installed in this environment')
 class WithSdem(unittest.TestCase):
+    @unittest.skipIf(os.environ.get('SDEM_RELEASED'), 'BP-11 holds against the SDEM the package is written from (its branch), not a release before it')
     def test_the_data_is_sdems_builtin_copy(self):   # BP-11: no drift while the fallback exists
         from sdem.parts import write_package_data
         out = Path(tempfile.mkdtemp())

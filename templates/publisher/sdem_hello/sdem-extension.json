@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "description": "A template SDEM extension: shows a workspace's check result — copy it to start your own",
   "kind": ["checker"],
-  "sdem": ">=0.18,<0.20",
+  "sdem": ">=0.18,<0.21",
   "metamodel": ">=0.14,<0.19",
   "uses": ["--version", "check --json"],
   "reads": ["the workspace, through sdem check"],

@@ -4,7 +4,7 @@ All made-up data. Rule ids: the [security aspect spec](docs/security-aspect-spec
 SDEM's [metamodel extensions](https://github.com/taumoeps/bian-sdem-framework/blob/main/docs/design/sdem-metamodel-extensions-spec.md) (MX-…) and
 [extension lifecycle](https://github.com/taumoeps/bian-sdem-framework/blob/main/docs/design/sdem-extension-lifecycle-spec.md) (EL-…) specs.
 
-## 0.3.0 (in progress, branch release/0.20)
+## 0.3.0 — 2026-11-21 (with SDEM 0.20.0)
 
 - **A workspace in SDEM 0.20's form** (SDEM's DL-22). Coverage, threats, review and the document read it as 0.19 held it — the copy SDEM writes with `export_019` (Data's records in the Application file, each approved `ACCESSED_BY` as access), proven record by record by SDEM's P2 — the form these rules are written in; records keep their ids, so security's own links hold. Switching security on and off, restoring, purging and proposing go through SDEM's commands on the workspace itself, as before.
 - **A design without BIAN** (A1 Business, A2 Data, A3 Application, A4 Technology) is never told its BIAN security layer (S2) is empty.

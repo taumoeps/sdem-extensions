@@ -15,7 +15,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
-        sdem: [release/0.20]
+        sdem: [v0.20.0, main]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4

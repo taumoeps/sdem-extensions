@@ -9,7 +9,7 @@
    "name": "Security Architecture",
    "position": "across",
    "file": "security.json",
-   "description": "controls, threats and trust boundaries across A1–A4, each in one security layer S1–S5",
+   "description": "controls, threats and trust boundaries across every layer of a design, each in one security layer S1–S5",
    "source": "sdem-security (NIST SP 800-53 Rev. 5, CSF 2.0, STRIDE, SP 800-207)"
   }
  ],

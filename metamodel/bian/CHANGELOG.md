@@ -1,6 +1,6 @@
 # sdem-bian — changes
 
-## 1.0.0.dev3 (branch release/0.20)
+## 1.0.0 — 2026-11-21 (with SDEM 0.20.0)
 
 - **For metamodel 0.18.0** (SDEM 0.20.0.dev1): the A2 metamodel file carries the new version; supports metamodel `>=0.17,<0.19`. `sdem bian update` opens each workspace in its own form (a root may hold workspaces in 0.19's and 0.20's). Regenerated from SDEM with `scripts/bian_package.py`.
 

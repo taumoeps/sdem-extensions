@@ -1,8 +1,8 @@
 {
   "name": "security",
   "command": "sdem-security",
-  "version": "0.3.0.dev2",
-  "description": "The security architecture: controls, threats and trust boundaries in S1–S5 across A1–A4, on NIST SP 800-53 Rev. 5 and CSF 2.0",
+  "version": "0.3.0",
+  "description": "The security architecture: controls, threats and trust boundaries in S1–S5 across every layer of a design, on NIST SP 800-53 Rev. 5 and CSF 2.0",
   "kind": [
     "metamodel",
     "checker"
@@ -50,7 +50,7 @@
     "across": [
       "S"
     ],
-    "note": "vertical: a layer beside A1–A4 whose links reach every layer (LR-11). A horizontal extension would say {\"within\": [\"A4\"]}."
+    "note": "vertical: a layer beside the design's layers whose links reach every one (LR-11). A horizontal extension would say {\"within\": [\"A4\"]}."
   },
   "builds_on": {
     "types": [

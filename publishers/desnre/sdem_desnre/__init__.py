@@ -560,7 +560,7 @@ def viewpoints(js):
     return out
 
 
-def workspace_bundle(ws, v, mm):
+def workspace_bundle(ws, v, mm, origin=None):
     """DW-40: what the workbench shows — the workspace's own files, and what SDEM says about them: the check report, each layer's
     document, the kinds of record each layer allows (with the profile's), and how each layer is drawn. All through SDEM's commands."""
     def js(args):
@@ -592,7 +592,8 @@ def workspace_bundle(ws, v, mm):
     for L in added:   # 0.7.7: an added layer's document and kinds of record too — the workbench's Document Output and Metamodel for e.g. Security
         r = run_sdem(ws, ['document', '--workspace', str(ws), '--layer', L])
         if r.returncode == 0: docs[L] = r.stdout
-    ext, purges = extension_states(ws, files, no_local_paths(extension_results(ws, files), ws))   # EL-07: {name: {state, …, results}}
+    o = origin or ws   # XA-10: an extension reports on the design itself — never on the 0.19 copy the plates are built from, whose numbers are not the design's
+    ext, purges = extension_states(o, files, no_local_paths(extension_results(o, files), o))   # EL-07: {name: {state, …, results}}
     carry_packs(files, profile_files)
     return {
         'extensions': ext, 'extension_purges': purges,
@@ -652,7 +653,7 @@ def model_for(ws, name, environment='production', scale=0.5, need_mark=True):
         from sdem import api
         stack = getattr(api, 'layers_in_use', lambda w: None)(ws)
     with as_019(ws) as w:   # DL-23: a 0.20 workspace built as the site's four plates, then Data put on a plate of its own
-        model = _model_for(w, name, environment, scale, need_mark)
+        model = _model_for(w, name, environment, scale, need_mark, origin=ws)
         data_ids = _data_ids(w) if stack else None
     if stack: model['workspace']['stack'] = stack
     if data_ids is not None:
@@ -712,7 +713,7 @@ def split_data_plate(model, data_ids, stack):
     return model
 
 
-def _model_for(ws, name, environment, scale, need_mark):
+def _model_for(ws, name, environment, scale, need_mark, origin=None):
     v, mm = gates(ws, need_mark)
     body = build(ws, scale, environment=environment)
     model = {'format': 'desnre-model', 'format_version': 1, 'name': name, 'data': 'synthetic',
@@ -720,7 +721,7 @@ def _model_for(ws, name, environment, scale, need_mark):
     errs = validate(model)
     if errs:
         raise PublishError('the model does not match its schema:\n  ' + '\n  '.join(errs[:10]))
-    model['workspace'] = workspace_bundle(ws, v, mm)   # DW-40: kept beside the 3D model by the site, for the workbench
+    model['workspace'] = workspace_bundle(ws, v, mm, origin)   # DW-40: kept beside the 3D model by the site, for the workbench
     return model
 
 

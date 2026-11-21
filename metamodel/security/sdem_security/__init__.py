@@ -175,7 +175,7 @@ def coverage_rows(ws):
 
 def cmd_coverage(a):
     rows = coverage_rows(a.workspace)
-    if a.json: print(json.dumps({'workspace': str(a.workspace), 'count': len(rows), 'protected': sum(r['protected'] for r in rows), 'protected_means': MANIFEST.get('protected_means'), 'items': rows}, indent=2)); return 0
+    if a.json: print(json.dumps(numbered({'workspace': str(a.workspace), 'count': len(rows), 'protected': sum(r['protected'] for r in rows), 'protected_means': MANIFEST.get('protected_means'), 'items': rows}, getattr(a, 'design', a.workspace), a.workspace), indent=2)); return 0
     for s in S_NAMES:
         mine = [r for r in rows if r['security_layer'] == s]
         if not mine: continue
@@ -206,7 +206,7 @@ def threats_data(ws):
 
 def cmd_threats(a):
     out = threats_data(a.workspace)
-    if a.json: print(json.dumps({'note': 'a checklist for a person (STRIDE per element) — not records; a threat is added only with sdem security propose', 'items': out}, indent=2)); return 0
+    if a.json: print(json.dumps(numbered({'note': 'a checklist for a person (STRIDE per element) — not records; a threat is added only with sdem security propose', 'items': out}, getattr(a, 'design', a.workspace), a.workspace), indent=2)); return 0
     print('STRIDE per element — a checklist for a person; nothing here is a record.')
     for x in out:
         if x['not_yet_considered']: print(f"  {x['security_layer']} {x['id']:<28} consider: {', '.join(STRIDE_WORDS[c] for c in x['not_yet_considered'])}")
@@ -296,7 +296,7 @@ def cmd_review(a):
     try: d = review_data(a.workspace)
     except ReviewError as e: print(str(e), file=sys.stderr); return 2
     findings, unprotected, no_rest = d['findings'], d['unprotected'], d['personal_data_without_sc28']
-    if a.json: print(json.dumps(d, indent=2)); return 0
+    if a.json: print(json.dumps(numbered(d, getattr(a, 'design', a.workspace), a.workspace), indent=2)); return 0
     print(f"Security review of {a.workspace} — {len(findings)} finding(s) from the security rules (the standard and the extension's own checks), "
           f"{len(d['excepted'])} under a person's exception, {len(unprotected)} exposed record(s) with no control")
     for f in findings: print(f"  {f.get('outcome'):<14} {f.get('rule'):<9} {f.get('record')}  {f.get('message', '')}")
@@ -413,6 +413,39 @@ def cmd_propose(a):
     r = sdem(*args); sys.stdout.write(r.stdout); sys.stderr.write(r.stderr); return r.returncode
 
 
+STABLE_OF_019 = {'A1': 'business', 'A2': 'bian', 'A4': 'technology'}   # A3: data or application, by the record's type
+NUMBERING = ("'layer' and the types are in the numbering this extension's rules are written in (SDEM 0.19's: A1 business, A2 BIAN, "
+             "A3 application and data, A4 technology). design_layer is the record's layer as this design names and numbers it — quote that (XA-10).")
+
+
+def design_layers(ws, copy=None):
+    """XA-10: {record id: {'id', 'code', 'name'}} — each record's layer by its stable id (business, bian, data, application,
+    technology) and as this design numbers it (SDEM's layers_in_use), so a reader never translates a number."""
+    try:
+        from sdem.api import layers_in_use
+        use = {l['id']: l for l in layers_in_use(ws)}
+    except ImportError: use = {}   # an SDEM without it: the stable id alone
+    w = copy or as_019(ws); recs, layer_of, _, _ = workspace(w); out = {}
+    for rid, r in recs.items():
+        L = layer_of.get(rid)
+        sid = ('data' if core_type(w, r['type']) in ('A3.DataEntity', 'A3.DataAttribute') else 'application') if L == 'A3' else STABLE_OF_019.get(L)
+        if sid: out[rid] = {'id': sid, **({'code': use[sid]['code'], 'name': use[sid]['name']} if sid in use else {})}
+    return out
+
+
+def numbered(d, ws, copy=None):
+    """XA-10: a report with each record's design_layer beside the fields it already has."""
+    m = design_layers(ws, copy)
+    def walk(x):
+        if isinstance(x, list): return [walk(v) for v in x]
+        if not isinstance(x, dict): return x
+        y = {k: walk(v) for k, v in x.items()}
+        rid = x.get('id') if isinstance(x.get('id'), str) else x.get('record') if isinstance(x.get('record'), str) else None
+        if rid in m and 'design_layer' not in y: y['design_layer'] = m[rid]
+        return y
+    return {**walk(d), 'numbering': NUMBERING}
+
+
 def as_019(ws):
     """DL-22: a workspace in SDEM 0.20's form read as 0.19 held it — Data's records in the Application file, each approved ACCESSED_BY as
     access inside it — the form this extension's rules are written in (SEC-S01…, MX-32a). A copy SDEM writes (export_019; proven record by
@@ -422,7 +455,7 @@ def as_019(ws):
     if form != 'ids': return ws
     import tempfile
     from sdem.migrate20 import export_019   # only an SDEM that writes the 0.20 form has it
-    out = Path(tempfile.mkdtemp(prefix='sdem-security-')) / Path(ws).name
+    out = Path(tempfile.mkdtemp(prefix='sdem-security-')) / (Path(ws).resolve().name or 'workspace')   # '.' has no name of its own
     export_019(ws, out)
     try:
         from sdem.api import layers_in_use
@@ -464,7 +497,7 @@ def main(argv=None):
         if not v: print(f'sdem security: cannot read SDEM\'s version from {out.strip()[:80]!r} — refusing rather than guessing', file=sys.stderr); return 2
         if not supported(v.group(0), MANIFEST['sdem']):
             print(f"sdem security: SDEM {v.group(0)} is not one this extension supports ({MANIFEST['sdem']})", file=sys.stderr); return 1
-    if a.command in ('coverage', 'threats', 'review', 'document'): a.workspace = as_019(a.workspace)   # read-only: the analysis in its own form
+    if a.command in ('coverage', 'threats', 'review', 'document'): a.design = a.workspace; a.workspace = as_019(a.workspace)   # read-only: the analysis in its own form
     return {'catalogue': cmd_catalogue, 'coverage': cmd_coverage, 'threats': cmd_threats, 'review': cmd_review, 'document': cmd_document, 'remove': cmd_remove, 'restore': cmd_restore, 'purge': cmd_purge, 'propose': cmd_propose}[a.command](a)
 
 

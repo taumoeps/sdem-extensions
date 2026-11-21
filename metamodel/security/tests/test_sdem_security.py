@@ -155,6 +155,31 @@ class WithoutBian(unittest.TestCase):   # DL-22: a design without BIAN (A1 Busin
             self.assertEqual(empty, ['S1', 'S3', 'S4', 'S5'])   # every security layer the design has, said empty — never S2: it has no service domains
         finally: shutil.rmtree(tmp, ignore_errors=True)
 
+    def test_each_record_says_its_layer_as_this_design_numbers_it(self):   # XA-10: without BIAN, Application is A3 here (0.19's rules call it A3 too)
+        tmp = Path(tempfile.mkdtemp()); ws = tmp / 'ws'
+        try:
+            run('new', '--workspace', ws, '--person', 'steven', '--core', '--form', '0.20')
+            (tmp / 'app.json').write_text(json.dumps({'layer': 'application', 'reason': 'a made-up design', 'changes': [{'op': 'add', 'record': {
+                'id': 'IFC-LOANS', 'type': 'A3.ApplicationInterface', 'version': '1', 'name': 'Loans API', 'lifecycle_status': 'planned'}}]}))
+            run('change', 'propose', tmp / 'app.json', '--workspace', ws, '--agent', 'sdem-a3-application', '--person', 'steven')
+            run('profile', 'include', 'ext:security', '--workspace', ws, '--person', 'steven', '--reason', 'security design')
+            run('profile', 'adopt', '--workspace', ws, '--person', 'steven', '--reason', 'the security layer')
+            c = run('security', 'coverage', '--workspace', ws, '--json')
+            ifc = [x for x in c['items'] if x['id'] == 'IFC-LOANS'][0]
+            self.assertEqual(ifc['design_layer'], {'id': 'application', 'code': 'A3', 'name': 'Application'}); self.assertIn('design_layer', c['numbering'])
+        finally: shutil.rmtree(tmp, ignore_errors=True)
+
+    def test_with_bian_technology_is_a5_and_data_a3(self):   # XA-10: the numbers the reader sees on the page, never 0.19's A4 / A3
+        tmp = Path(tempfile.mkdtemp()); ws = tmp / 'ws'
+        try:
+            run('new', '--workspace', ws, '--person', 'steven', '--example', 'payment-initiation', '--form', '0.20')
+            run('profile', 'include', 'ext:security', '--workspace', ws, '--person', 'steven', '--reason', 'security design')
+            run('profile', 'adopt', '--workspace', ws, '--person', 'steven', '--reason', 'the security layer')
+            items = run('security', 'coverage', '--workspace', ws, '--json')['items']
+            codes = {x['design_layer']['id']: x['design_layer']['code'] for x in items}
+            self.assertEqual(codes.get('technology'), 'A5'); self.assertEqual(codes.get('data'), 'A3'); self.assertEqual(codes.get('application'), 'A4')
+        finally: shutil.rmtree(tmp, ignore_errors=True)
+
 
 if __name__ == '__main__':
     unittest.main()

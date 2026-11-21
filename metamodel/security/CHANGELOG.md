@@ -4,6 +4,11 @@ All made-up data. Rule ids: the [security aspect spec](docs/security-aspect-spec
 SDEM's [metamodel extensions](https://github.com/taumoeps/bian-sdem-framework/blob/main/docs/design/sdem-metamodel-extensions-spec.md) (MX-…) and
 [extension lifecycle](https://github.com/taumoeps/bian-sdem-framework/blob/main/docs/design/sdem-extension-lifecycle-spec.md) (EL-…) specs.
 
+## 0.3.2 — 2026-11-22
+
+- **Each record says its layer as the design numbers it** (SDEM's XA-10): the JSON of review, coverage and threats gives every record a `design_layer` — its stable layer (business, bian, data, application, technology) and the number and name this design uses (with BIAN, Technology is A5) — and a `numbering` note. The fields it had (`layer`, the types) stay, in the numbering security's rules are written in. The DESNRE agent had labelled two A5 communication paths A4 while translating those numbers itself; the guide now tells it to quote `design_layer`.
+- `--workspace .` works on a workspace in SDEM 0.20's form (its 0.19 copy was given an empty folder name).
+
 ## 0.3.1 — 2026-11-22
 
 - **The AI agent's guide is the extension's own** (SDEM's XA-02, XA-07): `agent_guide` in the manifest says what layer S, its links and its reports mean — what the DESNRE site's agent was told in code written for security alone. It names no layer numbers, so it reads the same with or without BIAN. Its reports (review, coverage, threats, document) were already in the manifest; the publisher now runs them from there (XA-01, XA-03).

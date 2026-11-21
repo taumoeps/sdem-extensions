@@ -146,6 +146,7 @@ def cmd_catalogue(a):
 
 
 def coverage_rows(ws):
+    ws = as_019(ws)   # DL-22: a 0.20 workspace read as 0.19 held it
     recs, layer_of, rels, maps = workspace(ws)
     by = lambda rel, key: [m for m in maps if m['relationship'] == rel]
     rows = []
@@ -186,6 +187,7 @@ def cmd_coverage(a):
 
 
 def threats_data(ws):
+    ws = as_019(ws)   # DL-22: a 0.20 workspace read as 0.19 held it
     recs, layer_of, rels, maps = workspace(ws)
     stated = {}
     for m in maps:
@@ -217,6 +219,7 @@ def computed_findings(ws, today=None):
     not yet decidable — its subject still planned, its requirement only proposed — is `unresolved`, not `non_compliant` (AUD-02); a
     person's exception (sdem exception grant --rule SEC-S08 …) holds it as `exception_approved` (MX-17); only controls that can act count
     (AUD-03)."""
+    ws = as_019(ws)   # DL-22: a 0.20 workspace read as 0.19 held it
     recs, layer_of, rels, maps = workspace(ws)
     out, attrs = [], lambda i: (recs.get(i) or {}).get('attributes') or {}
     planned = lambda i: (recs.get(i) or {}).get('lifecycle_status') == 'planned'
@@ -252,6 +255,7 @@ def computed_findings(ws, today=None):
             add('SEC-S08', c, not planned(c), f"{'an API operation' if is_op else 'a component'} that accesses personal data has no audit control (AU-2 or AU-12) protecting it — DE.CM"
                 + (' — not decidable while it is planned' if planned(c) else ''))
     for L in S_NAMES:   # a security layer this design leaves empty — said, not hidden
+        if L == 'S2' and str(ws) in _NO_BIAN: continue   # a design without BIAN has no service domains to secure (DL-22)
         if not any(r['type'].endswith(('.SecurityControl', '.Threat')) and attrs(i).get('security_layer') == L for i, r in recs.items()):
             add('SEC-LAYER', L, False, f'{S_NAMES[L]} has no controls or threats in this design')
     held = exceptions(ws, today)
@@ -265,6 +269,7 @@ class ReviewError(Exception): pass
 
 def review_data(ws):
     """The security standard's findings (sdem comply) with SEC-S07, SEC-S08 and SEC-LAYER, the exposed records, and personal data with no SC-28."""
+    ws = as_019(ws)   # DL-22: a 0.20 workspace read as 0.19 held it
     r = sdem('comply', '--workspace', ws, '--json')
     try: comply = json.loads(r.stdout)
     except ValueError: raise ReviewError(f'sdem comply did not answer (exit {r.returncode}): ' + (r.stderr or r.stdout).strip()[-600:])
@@ -303,6 +308,7 @@ def cmd_review(a):
 def document_md(ws):
     """The security review as a readable document (Markdown): SDEM's security findings, coverage per S1–S5, the threats and what mitigates
     them, and the STRIDE checklist — generated, deterministic, nothing invented; every record named with its id."""
+    ws = as_019(ws)   # DL-22: a 0.20 workspace read as 0.19 held it
     recs, layer_of, rels, maps = workspace(ws)
     rev, rows, chk = review_data(ws), coverage_rows(ws), threats_data(ws)
     def safe(t):   # AUD-11: a record's own text cannot make a heading, a list item, a table row or HTML in the document
@@ -407,6 +413,27 @@ def cmd_propose(a):
     r = sdem(*args); sys.stdout.write(r.stdout); sys.stderr.write(r.stderr); return r.returncode
 
 
+def as_019(ws):
+    """DL-22: a workspace in SDEM 0.20's form read as 0.19 held it — Data's records in the Application file, each approved ACCESSED_BY as
+    access inside it — the form this extension's rules are written in (SEC-S01…, MX-32a). A copy SDEM writes (export_019; proven record by
+    record, P2), read and thrown away; a workspace in 0.19's form is read as it is. Records keep their ids, so security's own links hold."""
+    try: form = (_j(Path(ws) / 'workspace.json') or {}).get('names')
+    except OSError: form = None
+    if form != 'ids': return ws
+    import tempfile
+    from sdem.migrate20 import export_019   # only an SDEM that writes the 0.20 form has it
+    out = Path(tempfile.mkdtemp(prefix='sdem-security-')) / Path(ws).name
+    export_019(ws, out)
+    try:
+        from sdem.api import layers_in_use
+        if not any(l['id'] == 'bian' for l in layers_in_use(ws)): _NO_BIAN.add(str(out))   # the copy has 0.19's empty A2 file; the design has no BIAN
+    except ImportError: pass
+    return str(out)
+
+
+_NO_BIAN = set()   # copies (as_019) of designs without BIAN
+
+
 def main(argv=None):
     argv = sys.argv[1:] if argv is None else list(argv)
     if argv[:1] == ['--manifest']:   # how SDEM recognises an extension (EXT-05, EXT-15), and where its pack is (MX-01)
@@ -437,6 +464,7 @@ def main(argv=None):
         if not v: print(f'sdem security: cannot read SDEM\'s version from {out.strip()[:80]!r} — refusing rather than guessing', file=sys.stderr); return 2
         if not supported(v.group(0), MANIFEST['sdem']):
             print(f"sdem security: SDEM {v.group(0)} is not one this extension supports ({MANIFEST['sdem']})", file=sys.stderr); return 1
+    if a.command in ('coverage', 'threats', 'review', 'document'): a.workspace = as_019(a.workspace)   # read-only: the analysis in its own form
     return {'catalogue': cmd_catalogue, 'coverage': cmd_coverage, 'threats': cmd_threats, 'review': cmd_review, 'document': cmd_document, 'remove': cmd_remove, 'restore': cmd_restore, 'purge': cmd_purge, 'propose': cmd_propose}[a.command](a)
 
 

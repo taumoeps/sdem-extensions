@@ -132,5 +132,29 @@ class SecurityTests(unittest.TestCase):
         self.assertEqual(len(dry['purged']), 2); self.assertTrue(dry['not_reached'])
 
 
+HAS_020 = bool(SDEM) and '--form' in subprocess.run([SDEM, 'new', '--help'], capture_output=True, text=True).stdout   # an SDEM that makes the 0.20 form
+
+
+@unittest.skipUnless(HAS_020, 'SDEM before 0.20 has no design without BIAN in the 0.20 form')
+class WithoutBian(unittest.TestCase):   # DL-22: a design without BIAN (A1 Business, A2 Data, A3 Application, A4 Technology) and security
+    def test_its_bian_security_layer_is_not_asked_for(self):
+        tmp = Path(tempfile.mkdtemp()); ws = tmp / 'ws'
+        try:
+            run('new', '--workspace', ws, '--person', 'steven', '--core', '--form', '0.20')
+            (tmp / 'cap.json').write_text(json.dumps({'layer': 'business', 'reason': 'a made-up design', 'changes': [{'op': 'add', 'record': {
+                'id': 'CAP-LEND', 'type': 'A1.BusinessCapability', 'version': '1', 'name': 'Lending', 'lifecycle_status': 'planned'}}]}))   # a design with something in it: comply reports its standards
+            run('change', 'propose', tmp / 'cap.json', '--workspace', ws, '--agent', 'sdem-a1-business', '--person', 'steven')
+            (tmp / 'app.json').write_text(json.dumps({'layer': 'application', 'reason': 'a made-up design', 'changes': [{'op': 'add', 'record': {
+                'id': 'APP-LOANS', 'type': 'A3.ApplicationComponent', 'version': '1', 'name': 'Loans system', 'lifecycle_status': 'planned'}},
+                {'op': 'add', 'record': {'id': 'IFC-LOANS', 'type': 'A3.ApplicationInterface', 'version': '1', 'name': 'Loans API', 'lifecycle_status': 'planned'}}]}))   # an interface: what the security standard's rules look at
+            run('change', 'propose', tmp / 'app.json', '--workspace', ws, '--agent', 'sdem-a3-application', '--person', 'steven')
+            run('profile', 'include', 'ext:security', '--workspace', ws, '--person', 'steven', '--reason', 'security design')
+            run('profile', 'adopt', '--workspace', ws, '--person', 'steven', '--reason', 'the security layer')
+            d = run('security', 'review', '--workspace', ws, '--json')
+            empty = sorted(f['record'] for f in d['findings'] if f['rule'] == 'SEC-LAYER')
+            self.assertEqual(empty, ['S1', 'S3', 'S4', 'S5'])   # every security layer the design has, said empty — never S2: it has no service domains
+        finally: shutil.rmtree(tmp, ignore_errors=True)
+
+
 if __name__ == '__main__':
     unittest.main()

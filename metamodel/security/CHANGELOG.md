@@ -6,6 +6,9 @@ SDEM's [metamodel extensions](https://github.com/taumoeps/bian-sdem-framework/bl
 
 ## 0.3.0 (in progress, branch release/0.20)
 
+- **A workspace in SDEM 0.20's form** (SDEM's DL-22). Coverage, threats, review and the document read it as 0.19 held it — the copy SDEM writes with `export_019` (Data's records in the Application file, each approved `ACCESSED_BY` as access), proven record by record by SDEM's P2 — the form these rules are written in; records keep their ids, so security's own links hold. Switching security on and off, restoring, purging and proposing go through SDEM's commands on the workspace itself, as before.
+- **A design without BIAN** (A1 Business, A2 Data, A3 Application, A4 Technology) is never told its BIAN security layer (S2) is empty.
+- CI also runs against SDEM `release/0.20`; on SDEM 0.19 nothing changes (the 0.20 test is skipped there).
 - **Security with or without BIAN** (SDEM 0.20 step 1, BX-50, BX-51): its six link types to BIAN's A2 types (PROTECTS and THREATENS to service domains, control records, business objects) require `ext:bian`. On a core-only design they are left out — and `sdem profile show` says so — and security covers S1, S3, S4, S5 (S2 empty, said so by SEC-LAYER); with BIAN on, as before.
 
 ## 0.2.1 — 2026-11-19

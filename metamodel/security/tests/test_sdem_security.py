@@ -11,6 +11,7 @@ SDEM = shutil.which('sdem', path=str(Path(sys.executable).parent)) or shutil.whi
 import os
 REQUIRED = os.environ.get('SDEM_REQUIRED') == '1'   # in CI: SDEM is installed, so these tests run — never skipped
 if REQUIRED and not SDEM: raise SystemExit('SDEM_REQUIRED=1 but no sdem in this environment')
+HAS_FT09 = bool(SDEM) and subprocess.run([sys.executable, '-c', 'import sdem.graph as g; g.FederatedGraph.across'], capture_output=True).returncode == 0   # SDEM's full trace through a security record (FT-09)
 HAS_MX16 = bool(SDEM) and subprocess.run([SDEM, 'profile', 'exclude', '--help'], capture_output=True).returncode == 0   # SDEM 0.19.0 as tagged 2026-11-19: exclude, computed rules
 DESIGN = {'layer': 'S', 'reason': 'a made-up security design', 'changes': [
     {'op': 'add', 'record': {'id': 'SEC-SC28', 'type': 'SEC.S.SecurityControl', 'version': '1', 'name': 'Protection at rest', 'lifecycle_status': 'planned',
@@ -118,6 +119,19 @@ class SecurityTests(unittest.TestCase):
         self.assertIn('SEC-S08', out)
 
     @unittest.skipUnless(HAS_MX16, 'needs SDEM 0.19.0 as tagged on 2026-11-19 or later (MX-16, MX-17)')
+    @unittest.skipUnless(HAS_FT09, 'this SDEM traces a security record only through its own links (before FT-09)')
+    def test_a_controls_trace_is_the_trace_of_what_it_protects(self):   # SDEM FT-09: up and down from each record it protects, never on to another control or threat
+        g = self.tmp / 'graph'; run('build', '--workspace', self.ws, '-o', g)
+        def reach(d):
+            t = run('trace', 'SEC-SC28', '--graph', g, '--direction', d, '--json', ok=(0, 1))[d]; out = set()
+            def walk(n): out.add(n['id']); [walk(c['node']) for c in n.get('children') or []]
+            walk(t); return out
+        up, down = reach('up'), reach('down')
+        self.assertIn('PRC-PAY-01', up | down); self.assertIn('ENT-PAY-INSTR', up | down)            # what it protects
+        self.assertTrue(any(i.startswith('CAP-') for i in up))                                        # the business above what it protects
+        self.assertTrue(any(i.startswith(('APP-', 'CMP-')) for i in down))                            # the application below
+        self.assertNotIn('THR-DISCLOSE', up | down)                                                   # not the threat it mitigates
+
     def test_removing_security_leaves_a_design_that_passes(self):  # MX-16, AUD-01
         ws = self.tmp / 'removed'; shutil.copytree(self.ws, ws)
         d = run('security', 'remove', '--workspace', ws, '--person', 'steven', '--reason', 'security moves to its own workspace', '--json')

@@ -7,7 +7,7 @@
     "publisher"
   ],
   "sdem": ">=0.18,<0.21",
-  "metamodel": ">=0.14,<0.18",
+  "metamodel": ">=0.14,<0.19",
   "uses": [
     "--version",
     "check --json",

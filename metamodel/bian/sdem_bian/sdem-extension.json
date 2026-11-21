@@ -1,7 +1,7 @@
 {
   "name": "bian",
   "command": "sdem-bian",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "BIAN Service Domain Architecture — the A2 layer, its types, link types and inference rules, and the BIAN 14 catalogue (banking)",
   "kind": [
     "metamodel"

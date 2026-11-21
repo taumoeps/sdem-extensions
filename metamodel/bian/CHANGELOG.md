@@ -1,5 +1,9 @@
 # sdem-bian — changes
 
+## 1.0.2 — 2026-11-22
+
+- **BIAN's business objects without a download** (SDEM's BO-01…BO-09): the catalogue carries `objects-14.0.0.json` — every service domain's business objects, typed fields only, no descriptions — and `sdem bian objects suggest`, which says which BIAN object each of a design's data entities may be, with the evidence and a person's two commands; `--object <Object>` now works from the base. Written from SDEM's own copy (BP-11).
+
 ## 1.0.1 — 2026-11-22
 
 - **BIAN's own attributes** (SDEM's BX-04, BP-02): `data/attributes.json` carries the 31 attribute definitions of BIAN's types, so everything BIAN adds to a design now comes from this package. SDEM uses them only while BIAN is on; an SDEM without this file's support, or this package's 1.0.0, uses SDEM's own copy (BP-10). Nothing else changed.

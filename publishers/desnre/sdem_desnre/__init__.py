@@ -394,16 +394,16 @@ def build(ws, scale, topology=True, environment='production'):
 GRAPH_LOOK = {'S': ('Security Architecture', 'controls, threats and trust boundaries — the Security extension\'s graph', '#ef5350')}
 
 
-def build_integrity(ws, scale):
+def build_integrity(ws, scale, what='--graph'):
     """MID-01, MID-02: the Metamodel viewpoint drawn from SDEM's own knowledge graphs alone (`sdem model integrity --graph`) — every record of
     every graph, the extensions' too, placed by SDEM; every link inside a graph and every link between graphs, each an ArchiMate relationship.
     None with an SDEM that cannot (before 0.21.7) — then the layout-based model is drawn as before."""
-    r = run_sdem(ws, ['model', 'integrity', '--workspace', str(ws), '--graph', '--json'])
+    r = run_sdem(ws, ['model', 'integrity', '--workspace', str(ws), what, '--json'])
     try:
         g = json.loads(r.stdout) if r.returncode == 0 else None
     except ValueError:
         g = None
-    if not (isinstance(g, dict) and g.get('format') == 'sdem-integrity-graph/1'): return None
+    if not (isinstance(g, dict) and g.get('format') in ('sdem-integrity-graph/1', 'sdem-integrity-metamodel/1')): return None
     from sdem import api
     stack = {x['code']: x for x in (getattr(api, 'layers_in_use', lambda w: None)(ws) or [])}
     SH = {k.split('.')[-1]: v for k, v in SHAPE.items()}
@@ -421,12 +421,15 @@ def build_integrity(ws, scale):
         if a is None or b is None: continue
         if k['scope'] == 'between' and nodes[a][2] > nodes[b][2]: a, b = b, a   # drawn from the upper graph down
         edges.append([a, b, 0 if k['status'] == 'proposed' else (1 if k['scope'] == 'between' else 2), k.get('relationship') or k.get('kind')])
+    if g['format'] == 'sdem-integrity-metamodel/1':   # a kind's label says where it comes from and how many records the design has of it
+        for x in g['records']:
+            n = nodes[idx[x['id']]]; n[6] = f"{x.get('archimate') or 'kind'} · {'core' if x['source'] == 'core' else 'extension ' + x['source']} · {x['records_in_design']} in the design"
     def look(x):
         L = stack.get(x['code']) or {}
         return GRAPH_LOOK.get(x['code']) or PLATE_LOOK.get(L.get('id'), (x['name'], '', '#9aa0a6'))
     tech = next((i for i, x in enumerate(g['graphs']) if (stack.get(x['code']) or {}).get('id') == 'technology'), len(codes) - 1)
     c = g['counts']
-    return {'source': {'workspace': os.path.basename(os.path.normpath(ws)), 'generator': GENERATOR, 'from': 'sdem model integrity --graph'},
+    return {'source': {'workspace': os.path.basename(os.path.normpath(ws)), 'generator': GENERATOR, 'from': 'sdem model integrity ' + what},
             'counts': {'records': c['records'], 'inner': c['inside'], 'mappings': c['between'] + c['proposed'], 'proposed': c['proposed']},
             'environment': 'all', 'zone_links': [], 'scale': scale, 'zones': zones, 'nodes': nodes, 'edges': edges,
             'layers': [{'code': x['code'], 'name': look(x)[0], 'sub': look(x)[1], 'color': look(x)[2]} for x in g['graphs']], 'zoneLayer': tech}
@@ -747,6 +750,7 @@ def workspace_bundle(ws, v, mm, origin=None):
         **({'chains': chains} if (chains := design_chains(o)) else {}),
         **({'gaps': gaps} if (gaps := design_gaps(o)) else {}),
         **({'integrity': ig} if (ig := design_integrity(o)) else {}),
+        **({'metamodel_view': mv} if (mv := build_integrity(o, 0.5, '--metamodel')) else {}),   # the Metamodel Core and Extensions drawn (SDEM 0.21.8)
         **({'design': own} if (own := own_form(o, profile)) else {}),
         'status': no_local_paths(health(js(['status', '--workspace', str(ws), '--json'])), ws),
         'types': {L: (js(['types', L, '--workspace', str(ws), '--json']) or {}).get('types', []) for L in codes + tuple(added)},

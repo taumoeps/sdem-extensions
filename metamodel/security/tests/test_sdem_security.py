@@ -112,6 +112,18 @@ class SecurityTests(unittest.TestCase):
         self.assertEqual(found.get(('SEC-S05b', 'SEC-DONE')), 'non_compliant')    # implemented with nothing enforcing it
         self.assertEqual(found.get(('SEC-S06b', 'THR-LIKELY')), 'non_compliant')  # high likelihood, nothing mitigates it
 
+    def test_each_layer_has_its_rules_and_they_fire(self):   # SX-12: S1–S5 each checked — on the bundled example, every new rule finds something
+        found = {f['rule'] for f in run('security', 'review', '--workspace', self.ws, '--json')['findings'] if f['outcome'] in ('non_compliant', 'unresolved')}
+        for rule in ('SEC-S09', 'SEC-S10', 'SEC-S11', 'SEC-S12', 'SEC-S13', 'SEC-S14', 'SEC-S15'): self.assertIn(rule, found)
+        here = Path(S.__file__).parent
+        rules = json.loads((here / 'security-standard.json').read_text())['rules'] + json.loads((here / 'pack.json').read_text())['computed_rules']
+        layers = {r['id']: r['message'].rsplit('— ', 1)[-1].split(';')[0] for r in rules if r['id'] >= 'SEC-S09'}
+        self.assertEqual(sorted(set(layers.values())), ['S1', 'S2', 'S3', 'S4', 'S5'])      # one rule or more for every security layer
+
+    def test_a_control_may_name_other_standards_by_reference(self):   # SX-13
+        a = {x['name']: x for x in json.loads((Path(S.__file__).parent / 'pack.json').read_text())['attributes'] if x['entity'] == 'SEC.S.SecurityControl'}
+        self.assertEqual(a['also_satisfies']['type'], 'list<string>'); self.assertNotIn('required', a['also_satisfies'])
+
     @unittest.skipUnless(HAS_MX16, 'needs SDEM 0.19.0 as tagged on 2026-11-19 or later (MX-16, MX-17)')
     def test_a_person_may_grant_an_exception_to_a_computed_rule(self):  # MX-17, AUD-02
         out = run('exception', 'grant', '--workspace', self.ws, '--rule', 'SEC-S08', '--records', 'CMP-PAY-CAPTURE', '--expires', '2099-12-31',
@@ -131,6 +143,19 @@ class SecurityTests(unittest.TestCase):
         self.assertTrue(any(i.startswith('CAP-') for i in up))                                        # the business above what it protects
         self.assertTrue(any(i.startswith(('APP-', 'CMP-')) for i in down))                            # the application below
         self.assertNotIn('THR-DISCLOSE', up | down)                                                   # not the threat it mitigates
+
+    def test_impact_names_a_linked_control_as_directly_affected(self):   # SDEM KG-Q-09: by the shortest path, never 'no_impact' through a longer one
+        ws = self.tmp / 'ws-impact'; shutil.copytree(self.ws, ws)   # a control on the domain, enforced by the application that realises it: two paths to the control
+        for src, rel, tgt in (('SEC-SC28', 'PROTECTS', 'SD-PI'), ('SEC-SC28', 'ENFORCED_BY', 'APP-PAY-HUB')):
+            run('connect', src, rel, tgt, '--workspace', ws, '--person', 'steven', '--evidence', 'design_document:security-design#1', '--rationale', 'made-up example')
+        g = self.tmp / 'graph-impact'; run('build', '--workspace', ws, '-o', g)
+        ms = json.loads((ws / 'mappings.json').read_text(encoding='utf-8'))['mappings']
+        sec = [m for m in ms if m.get('status') == 'approved' and m['source']['id'].startswith(('SEC-', 'THR-'))]
+        self.assertTrue(sec)
+        for m in sec:
+            rows = run('impact', m['target']['id'], '--change', 'modify', '--graph', g, '--json')['instances']
+            r = next(x for x in rows if x['id'] == m['source']['id'])
+            self.assertEqual(r['relation'], 'up1', (m['target']['id'], r))
 
     def test_removing_security_leaves_a_design_that_passes(self):  # MX-16, AUD-01
         ws = self.tmp / 'removed'; shutil.copytree(self.ws, ws)

@@ -1,13 +1,13 @@
 {
   "name": "desnre",
   "command": "sdem-desnre",
-  "version": "0.10.1",
+  "version": "0.10.2",
   "description": "Publishes a made-up SDEM workspace to your own page of the DESNRE site, as a 3D view — a draft first, then live",
   "kind": [
     "publisher"
   ],
-  "sdem": ">=0.18,<0.21",
-  "metamodel": ">=0.14,<0.19",
+  "sdem": ">=0.18,<1.0",
+  "metamodel": ">=0.14,<1.0",
   "uses": [
     "--version",
     "check --json",

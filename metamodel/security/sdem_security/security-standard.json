@@ -4,7 +4,7 @@
  "standard": {
   "id": "SEC",
   "title": "Security architecture standard (sdem-security)",
-  "version": "2",
+  "version": "3",
   "owner": "sdem-security maintainers",
   "source": "NIST SP 800-53 Rev. 5 and CSF 2.0 (public domain); security/docs/security-aspect-spec.md \u00a76",
   "note": "SEC-S07 (security requirements met by a control) and SEC-S08 (audit control on components that access personal data) follow paths SDEM rules cannot express; sdem security review checks them."
@@ -149,6 +149,68 @@
    },
    "severity": "warning",
    "message": "a high-likelihood threat is mitigated by a control \u2014 or accepted under a person's exception (RA-3, RA-7, ID.RA)"
+  },
+  {
+   "id": "SEC-S09",
+   "entity": "A1.BusinessProcess",
+   "when": {
+    "criticality": [
+     "high",
+     "critical"
+    ]
+   },
+   "across": {
+    "relationship": "PROTECTS",
+    "direction": "in",
+    "min": 1
+   },
+   "message": "a critical business process is protected by at least one control \u2014 separation of duties, authorisation (AC-5, AC-3, GV.RR) \u2014 S1",
+   "severity": "warning"
+  },
+  {
+   "id": "SEC-S12",
+   "entity": "A3.DataEntity",
+   "when": {
+    "personal_information": true
+   },
+   "require": [
+    "retention_period"
+   ],
+   "message": "personal data states how long it is kept (SI-12 information retention, PR.DS) \u2014 S3",
+   "severity": "warning"
+  },
+  {
+   "id": "SEC-S13",
+   "entity": "A3.ApplicationInterface",
+   "when": {
+    "internet_facing": true
+   },
+   "across": {
+    "relationship": "PROTECTS",
+    "direction": "in",
+    "min": 1
+   },
+   "message": "an internet-facing interface is protected by a control \u2014 authorisation per operation, input validation (AC-3, SI-10, PR.AA) \u2014 S4",
+   "severity": "warning"
+  },
+  {
+   "id": "SEC-S14",
+   "entity": "A3.ApplicationComponent",
+   "require": [
+    "recovery_time_objective",
+    "recovery_point_objective"
+   ],
+   "message": "an application states its recovery time and recovery point, so backup and recovery can be designed (CP-9, CP-10, RC.RP) \u2014 S4",
+   "severity": "warning"
+  },
+  {
+   "id": "SEC-S15",
+   "entity": "A4.SystemSoftware",
+   "require": [
+    "end_of_support"
+   ],
+   "message": "system software states when its support ends, so unsupported components are seen (SA-22, SI-2, ID.AM-08) \u2014 S5",
+   "severity": "warning"
   }
  ]
 }

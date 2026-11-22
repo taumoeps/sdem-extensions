@@ -4,6 +4,13 @@ All made-up data. Rule ids: the [security aspect spec](docs/security-aspect-spec
 SDEM's [metamodel extensions](https://github.com/taumoeps/bian-sdem-framework/blob/main/docs/design/sdem-metamodel-extensions-spec.md) (MX-…) and
 [extension lifecycle](https://github.com/taumoeps/bian-sdem-framework/blob/main/docs/design/sdem-extension-lifecycle-spec.md) (EL-…) specs.
 
+## 0.4.0 — 2026-11-22
+
+- **Every security layer is checked** (SX-12). Seven new rules, each a warning with its NIST control and CSF reference: a critical business process has a control (S1, SEC-S09); a service domain has a control (S2, SEC-S10 — computed, and only where BIAN is on); an application records the data it uses (S3, SEC-S11, CM-12) and personal data states its retention (SEC-S12, SI-12); an internet-facing interface has a control (S4, SEC-S13) and an application states its recovery time and point (SEC-S14, CP-9); system software states when its support ends (S5, SEC-S15, SA-22). On the Payment example they find the two applications that record no data they use.
+- **Supports SDEM's metamodel 0.19.0** (the Data Architecture). SEC-S11 is computed by `sdem security review`, so it reads a design's access links in either form.
+- **A control may name other standards it meets** (SX-13): `also_satisfies` — ISO/IEC 27001, APRA CPS 234, PCI DSS or OWASP ASVS clauses, by reference only.
+- Tested with SDEM's fixes of 2026-11-22: a control's trace is the trace of what it protects (FT-09), and impact names a linked control as directly affected (KG-Q-09).
+
 ## 0.3.2 — 2026-11-22
 
 - **Each record says its layer as the design numbers it** (SDEM's XA-10): the JSON of review, coverage and threats gives every record a `design_layer` — its stable layer (business, bian, data, application, technology) and the number and name this design uses (with BIAN, Technology is A5) — and a `numbering` note. The fields it had (`layer`, the types) stay, in the numbering security's rules are written in. The DESNRE agent had labelled two A5 communication paths A4 while translating those numbers itself; the guide now tells it to quote `design_layer`.

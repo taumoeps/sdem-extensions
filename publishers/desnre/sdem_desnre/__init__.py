@@ -593,6 +593,12 @@ def workspace_bundle(ws, v, mm, origin=None):
         r = run_sdem(ws, ['document', '--workspace', str(ws), '--layer', L])
         if r.returncode == 0: docs[L] = r.stdout
     o = origin or ws   # XA-10: an extension reports on the design itself — never on the 0.19 copy the plates are built from, whose numbers are not the design's
+    own_docs = {}   # DW-77: in a design in the 0.20 form, each of its layers' documents as the design numbers them (Data apart from Application), keyed by layer id
+    if origin and is_020(origin):
+        from sdem import api
+        for x in (getattr(api, 'layers_in_use', lambda w: None)(origin) or []):
+            r = run_sdem(origin, ['document', '--workspace', str(origin), '--layer', x['code']])
+            if r.returncode == 0: own_docs[x['id']] = r.stdout
     ext, purges = extension_states(o, files, no_local_paths(extension_results(o, files), o))   # EL-07: {name: {state, …, results}}
     carry_packs(files, profile_files)
     return {
@@ -600,6 +606,7 @@ def workspace_bundle(ws, v, mm, origin=None):
         'sdem': v, 'metamodel': mm, 'files': files, 'profile': no_local_paths(profile, ws), 'profile_files': profile_files,
         'check': no_local_paths(js(['check', '--workspace', str(ws), '--json']), ws),
         'documents': docs,
+        **({'documents_by_layer': own_docs} if own_docs else {}),
         'status': no_local_paths(health(js(['status', '--workspace', str(ws), '--json'])), ws),
         'types': {L: (js(['types', L, '--workspace', str(ws), '--json']) or {}).get('types', []) for L in LAYERS + tuple(added)},
         'viewpoints': viewpoints(js),   # ARV-23: the viewpoint definitions SDEM defines (each type's ArchiMate notation is in 'types')
@@ -663,7 +670,7 @@ def model_for(ws, name, environment='production', scale=0.5, need_mark=True):
     return model
 
 
-DATA_TYPES = ('A3.DataEntity', 'A3.DataAttribute')
+DATA_TYPES = ('A3.DataEntity', 'A3.DataAttribute', 'A3.DataDomain')   # SDEM DAR-01: a data domain is Data's too
 PLATE_LOOK = {'business': ('Business Architecture', 'the business view', '#e3b667'), 'bian': ('Service Domains', 'the BIAN service domains', '#dba3e3'),
               'data': ('Data Architecture', 'the data objects and their fields', '#7fd3cf'), 'application': ('Application Architecture', 'the components and their flows', '#86b9f5'),
               'technology': ('Technology Architecture', 'where the software runs', '#84d39f')}

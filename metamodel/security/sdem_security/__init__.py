@@ -214,7 +214,7 @@ def cmd_threats(a):
 
 
 def computed_findings(ws, today=None):
-    """SEC-S07, SEC-S08 and SEC-LAYER — checks along paths SDEM's rule language cannot express (the requirements registry; a component's
+    """SEC-S07, SEC-S08, SEC-S10, SEC-S11 and SEC-LAYER — checks along paths SDEM's rule language cannot express (the requirements registry; a component's
     or an operation's access to personal data). Reported in the standard's shape. As the standard's own rules (PR-11a): a check that is
     not yet decidable — its subject still planned, its requirement only proposed — is `unresolved`, not `non_compliant` (AUD-02); a
     person's exception (sdem exception grant --rule SEC-S08 …) holds it as `exception_approved` (MX-17); only controls that can act count
@@ -254,6 +254,15 @@ def computed_findings(ws, today=None):
         if not any(audit(x) for x in holders):   # an operation is audited by its own control, or by the interface or component that serves it
             add('SEC-S08', c, not planned(c), f"{'an API operation' if is_op else 'a component'} that accesses personal data has no audit control (AU-2 or AU-12) protecting it — DE.CM"
                 + (' — not decidable while it is planned' if planned(c) else ''))
+    for c in sorted(i for i in recs if kt(i) == 'A3.ApplicationComponent'):   # SEC-S11 (CM-12): computed, so it reads access the same in either form (0.19: inside Application; 0.20: ACCESSED_BY)
+        if not any(l.get('kind') == 'access' and l.get('source') == c for l in rels):
+            add('SEC-S11', c, not planned(c), 'an application that records no data it reads or writes — its data\'s protection cannot reach it (CM-12, ID.AM-07)'
+                + (' — not decidable while it is planned' if planned(c) else ''))
+    if str(ws) not in _NO_BIAN:   # SEC-S10: a service domain is protected by a control — computed, since a design without BIAN has no service domain type (DL-22)
+        for d in sorted(i for i in recs if kt(i) == 'A2.ServiceDomain'):
+            if not any(m['relationship'] == 'PROTECTS' and m['target']['id'] == d and (recs.get(m['source']['id']) or {}).get('type', '').endswith('.SecurityControl') for m in maps):
+                add('SEC-S10', d, not planned(d), 'a service domain that no control protects — who may invoke it, the integrity of what it holds (AC-3, SI-7, PR.AA)'
+                    + (' — not decidable while it is planned' if planned(d) else ''))
     for L in S_NAMES:   # a security layer this design leaves empty — said, not hidden
         if L == 'S2' and str(ws) in _NO_BIAN: continue   # a design without BIAN has no service domains to secure (DL-22)
         if not any(r['type'].endswith(('.SecurityControl', '.Threat')) and attrs(i).get('security_layer') == L for i, r in recs.items()):

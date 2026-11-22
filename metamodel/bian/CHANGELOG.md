@@ -1,5 +1,9 @@
 # sdem-bian — changes
 
+## 1.0.3 — 2026-11-22
+
+- Supports SDEM's metamodel 0.19.0 (the Data Architecture: data domains, ownership, read and write on access links). Nothing else changes.
+
 ## 1.0.2 — 2026-11-22
 
 - **BIAN's business objects without a download** (SDEM's BO-01…BO-09): the catalogue carries `objects-14.0.0.json` — every service domain's business objects, typed fields only, no descriptions — and `sdem bian objects suggest`, which says which BIAN object each of a design's data entities may be, with the evidence and a person's two commands; `--object <Object>` now works from the base. Written from SDEM's own copy (BP-11).

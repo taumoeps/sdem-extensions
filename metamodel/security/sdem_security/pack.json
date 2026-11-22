@@ -198,6 +198,12 @@
    "name": "enforcement",
    "type": "string",
    "description": "what enforces it — e.g. an API gateway, mutual TLS"
+  },
+  {
+   "entity": "SEC.S.SecurityControl",
+   "name": "also_satisfies",
+   "type": "list<string>",
+   "description": "clauses of other standards this control also meets, by reference only — e.g. 'ISO/IEC 27001:2022 A.8.24', 'APRA CPS 234 para 21', 'PCI DSS 4.0.1 3.5.1', 'OWASP ASVS 5.0 V8' (no standard's text is shipped)"
   }
  ],
  "link_kinds": [
@@ -644,6 +650,16 @@
   {
    "id": "SEC-S08",
    "message": "a component or API operation that accesses personal data is protected by an audit control (AU-2 or AU-12) — DE.CM",
+   "severity": "warning"
+  },
+  {
+   "id": "SEC-S10",
+   "message": "a service domain in the design is protected by at least one control — who may invoke it, the integrity of what it holds (AC-3, SI-7, PR.AA) — S2; only where BIAN is on (DL-22)",
+   "severity": "warning"
+  },
+  {
+   "id": "SEC-S11",
+   "message": "an application records the data it reads or writes, so the data's protection reaches it (CM-12 information location, ID.AM-07) — S3",
    "severity": "warning"
   }
  ]

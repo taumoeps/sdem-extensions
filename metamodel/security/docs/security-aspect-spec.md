@@ -79,6 +79,15 @@ Links into A1–A4 are proposed and approved like SDEM's own (`sdem link`, `sdem
 | **SEC-S06** | A threat rated high (likelihood or impact) has a **MITIGATES**, or `treatment: accept` under a person's exception (`sdem exception grant`) | RA-3, RA-7 · ID.RA |
 | **SEC-S07** | Every `security` requirement is met by at least one control (`requirements`) | PL-8 · GV.PO |
 | **SEC-S08** | A component that accesses personal data is **PROTECTED** by an audit control (AU-2 or AU-12) | AU-2, AU-12 · DE.CM |
+| **SEC-S09** | S1 — a business process with `criticality` high or critical is **PROTECTED** by at least one control | AC-5, AC-3 · GV.RR |
+| **SEC-S10** | S2 — a service domain is **PROTECTED** by at least one control; only where BIAN is on (computed by `sdem security review`) | AC-3, SI-7 · PR.AA |
+| **SEC-S11** | S3 — an application component records the data it reads or writes (an access link), so the data's protection reaches it (computed by `sdem security review`, so it reads either form) | CM-12 · ID.AM-07 |
+| **SEC-S12** | S3 — personal data states its `retention_period` | SI-12 · PR.DS |
+| **SEC-S13** | S4 — an `internet_facing` interface is **PROTECTED** by a control (authorisation per operation, input validation) | AC-3, SI-10 · PR.AA |
+| **SEC-S14** | S4 — an application component states its `recovery_time_objective` and `recovery_point_objective` | CP-9, CP-10 · RC.RP |
+| **SEC-S15** | S5 — system software states its `end_of_support` | SA-22, SI-2 · ID.AM-08 |
+
+**SX-12 — every security layer is checked** *(the owner, 2026-11-22: "ok implement")*: SEC-S09…S15 give S1, S2 and S4 their first rules and S3 and S5 more, each a warning on an attribute or link SDEM already has — no new design type, no new link between design layers. **SX-13 — other standards, by reference only**: a control may name clauses of other standards it also meets in `also_satisfies` (e.g. `ISO/IEC 27001:2022 A.8.24`, `APRA CPS 234 para 21`, `PCI DSS 4.0.1 3.5.1`, `OWASP ASVS 5.0 V8`); no standard's text is shipped (ISO, PCI and CIS are licensed; NIST is public domain), and nothing checks the reference.
 
 A value not given is `unresolved`, never compliant (PR-11a, PR-20) — e.g. the example's two paths whose `encrypted` is not given.
 

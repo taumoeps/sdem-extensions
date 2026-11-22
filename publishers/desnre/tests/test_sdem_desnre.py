@@ -236,10 +236,10 @@ class ExtensionTests(unittest.TestCase):
             self.assertEqual(code, 0, err); self.assertIn('already in the workspace', text); self.assertEqual(site.changes[1]['status'], 'pulled')
 
 
-    def test_supports_sdem_018_to_020(self):   # desnre 0.7.0: SDEM 0.18 and 0.19; 0.9.0: 0.20 too (a 0.20 workspace published as 0.19 held it, DL-23)
-        for v in ('0.18.0', '0.19.0', '0.20.0'): self.assertTrue(X.in_range(v, X.MANIFEST['sdem']), v)
-        for v in ('0.14.0', '0.17.0'): self.assertTrue(X.in_range(v, X.MANIFEST['metamodel']), v)
-        self.assertFalse(X.in_range('0.21.0', X.MANIFEST['sdem']))
+    def test_supports_sdem_018_onwards(self):   # desnre 0.7.0: SDEM 0.18 and 0.19; 0.9.0: 0.20 too; 0.10.2: any additive change before 1.0 (MIP-01, the owner's MIP-D2)
+        for v in ('0.18.0', '0.19.0', '0.20.0', '0.21.0'): self.assertTrue(X.in_range(v, X.MANIFEST['sdem']), v)
+        for v in ('0.14.0', '0.17.0', '0.19.0'): self.assertTrue(X.in_range(v, X.MANIFEST['metamodel']), v)
+        self.assertFalse(X.in_range('0.17.0', X.MANIFEST['sdem'])); self.assertFalse(X.in_range('1.0.0', X.MANIFEST['sdem']))
 
     def test_a_full_design_builds_without_its_fields_and_locations(self):   # SDEM 0.19: fields and locations are in the workspace, not drawn
         v2 = SDEM / 'examples' / 'payment-initiation-v2'

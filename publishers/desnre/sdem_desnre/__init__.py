@@ -608,11 +608,40 @@ def workspace_bundle(ws, v, mm, origin=None):
         'documents': docs,
         **({'documents_by_layer': own_docs} if own_docs else {}),
         **({'chains': chains} if (chains := design_chains(o)) else {}),
+        **({'design': own} if (own := own_form(o, profile)) else {}),
         'status': no_local_paths(health(js(['status', '--workspace', str(ws), '--json'])), ws),
         'types': {L: (js(['types', L, '--workspace', str(ws), '--json']) or {}).get('types', []) for L in LAYERS + tuple(added)},
         'viewpoints': viewpoints(js),   # ARV-23: the viewpoint definitions SDEM defines (each type's ArchiMate notation is in 'types')
         'layouts': {L: js(['layout', '--layer', L, '--workspace', str(ws), '--json']) for L in LAYERS},
     }
+
+
+def own_form(ws, profile=None):
+    """MIP-04 (SDEM's metamodel integrity plan; MID-06): the design in its own form — each layer as the design keeps it (its file, its
+    records with their stable type ids, its links), numbered as SDEM numbers the design, with the kinds of record each layer allows (each
+    with its stable id), and the links between layers. The site reads this; the 0.19-shaped copy beside it is for older pages only.
+    None for a design in 0.19's form."""
+    if not is_020(ws): return None
+    from sdem import api
+    stack = getattr(api, 'layers_in_use', lambda w: None)(ws) or []
+    js = lambda args: (lambda r: json.loads(r.stdout) if r.returncode == 0 and r.stdout.strip().startswith('{') else None)(run_sdem(ws, args))
+    layers = []
+    def add(lid, code, name, file, position):
+        f = Path(ws) / file
+        if not f.exists(): return
+        doc = json.loads(f.read_text(encoding='utf-8'))
+        types = (js(['types', code, '--workspace', str(ws), '--json']) or {}).get('types', [])
+        for t in types:   # ST-01: a type's stable id — its layer's id and its name (a profile's or extension's type keeps its own)
+            short = str(t.get('type', '')).split('.')[-1]
+            t['id'] = t['type'] if position != 'stack' else f'{lid}.{short}'
+        layers.append({'id': lid, 'code': code, 'name': name, 'position': position, 'file': file,
+                       'instances': doc.get('instances', []), 'relationships': doc.get('relationships', []), 'types': types})
+    for x in stack: add(x['id'], x['code'], x.get('name') or x['code'], f"{x['id']}.json", 'stack')
+    for L in ((profile or {}).get('layers') or []):
+        if L.get('position') in ('above', 'below', 'across') and L.get('file'):
+            add(L.get('id') or L['code'], L['code'], L.get('name') or L['code'], L['file'], L['position'])
+    mf = Path(ws) / 'mappings.json'
+    return {'form': '0.20', 'layers': layers, 'mappings': json.loads(mf.read_text(encoding='utf-8')).get('mappings', []) if mf.exists() else []}
 
 
 def design_chains(ws):

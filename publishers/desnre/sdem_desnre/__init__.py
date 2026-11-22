@@ -76,11 +76,15 @@ def sdem_version(ws):
 
 def metamodel_version(ws):
     found = set()
-    for f in FILES:
+    if is_020(ws):   # MIP-04: a design in 0.20's form — its own layer files, as SDEM names them
+        from sdem import api
+        files = [f"{x['id']}.json" for x in (getattr(api, 'layers_in_use', lambda w: None)(ws) or [])]
+    else: files = FILES
+    for f in files:
         with open(os.path.join(ws, f), encoding='utf-8') as fh:
             found.add(json.load(fh).get('metamodel_version', ''))
     if len(found) != 1 or not next(iter(found)):
-        raise PublishError(f'the four layer files do not name one metamodel version: {sorted(found)}')
+        raise PublishError(f'the layer files do not name one metamodel version: {sorted(found)}')
     return found.pop()
 
 
@@ -385,6 +389,91 @@ def build(ws, scale, topology=True, environment='production'):
     }
 
 
+
+
+def build_020(ws, scale, environment='production'):
+    """MIP-04 (MID-06): a design in SDEM 0.20's form drawn from its own layers — one plate per layer of its stack (Business, BIAN where it is
+    on, Data, Application, Technology), each laid out by SDEM itself (`sdem layout --layer <code>`; Technology by its network zones), types
+    matched by their own name whatever the numbering, the links between layers from its registry. No 0.19-shaped copy."""
+    from sdem import api
+    stack = getattr(api, 'layers_in_use', lambda w: None)(ws) or []
+    if not stack: raise PublishError(f'{ws}: SDEM names no layers for this design (sdem.api.layers_in_use)')
+    short = lambda t: str(t or '').split('.')[-1]
+    SH = {k.split('.')[-1]: v for k, v in SHAPE.items()}
+    nodes, idx, inner, dropped, zone_links, fits, zones = [], {}, [], set(), [], [], [[] for _ in stack]
+    exists = set()
+    def rect(r): return [round(c, 3) for c in (*plate(r[0], r[1]), *plate(r[2], r[3]))]
+    def place(l, sh, skip=()):
+        if sh['id'] in skip: return
+        k = SH.get(short(sh['type']), 'obj')
+        if short(sh['type']) == 'SystemSoftware' and DATABASE.search(sh.get('name') or ''): k = 'db'
+        x, z = plate(*sh['at'])
+        idx[sh['id']] = len(nodes)
+        nodes.append([sh['id'], sh['name'], l, round(x, 3), round(z, 3), k, readable(sh['type'])] + ([sh['zone']] if sh.get('zone') else []))
+    for l, L in enumerate(stack):
+        f = Path(ws) / f"{L['id']}.json"
+        doc = json.loads(f.read_text(encoding='utf-8')) if f.exists() else {'instances': [], 'relationships': []}
+        exists |= {i['id'] for i in doc.get('instances', [])}
+        if L['id'] == 'technology':
+            lay = sdem_layout(ws, environment)
+            dropped |= set(lay['left_out'])
+            zones[l] = [[z['label'], *rect(z['rect']), z['id'], z['part_of']] for z in lay['zones']]
+            zones[l] += [[f"runs on {g['platform']}", *rect(g['rect'])] for g in lay['runs_on']]
+            if lay['not_in_a_zone']: zones[l].append([lay['strip']['label'], *rect(lay['not_in_a_zone'])])
+            one_env = (environment or 'all').lower() != 'all'
+            skip = {sh['id'] for sh in lay['shapes'] if (one_env and short(sh['type']) == 'DeploymentEnvironment') or short(sh['type']) == 'CommunicationNetwork'}
+            dropped |= skip
+            for sh in lay['shapes']: place(l, sh, skip)
+            inner += [(x['source'], x['target'], 2, x['kind'], 1 if x['shown_by'] == 'position' else 0) for x in lay['links'] if x['source'] not in skip and x['target'] not in skip]
+            inner += [(q['from'], q['to'], 2, f"path · {q['name']}" + (f" · {q['protocol']}" if q.get('protocol') else ''), 0) for q in lay.get('paths', [])]
+            dropped |= {q['id'] for q in lay.get('paths', [])}
+            zone_links += [[c['from'], c['to']] for c in lay['connections']]
+            continue
+        cl = sdem_containment(ws, L['code'])
+        if not cl: raise PublishError(f"sdem layout --layer {L['code']} gave no layout for {L['name']} — the 3D view needs SDEM's layout for every layer")
+        zones[l] = [[z['label'], *rect(z['rect']), z['id'], z['part_of']] for z in cl['zones']]
+        if cl.get('strip'): zones[l].append([cl['strip']['label'], *rect(cl['strip']['rect'])])
+        for sh in cl['shapes']: place(l, sh)
+        inner += [(x['source'], x['target'], 2, x['kind'], 2 if x['shown_by'] == 'position' else 0) for x in cl['links']]
+        zone_links += [[c['from'], c['to']] for c in cl['connections']]
+        fits.append(cl.get('fit', 1) or 1)
+    for f in sorted(Path(ws).glob('*.json')):   # an extension's records (security.json): in the workspace, shown in their own viewpoint
+        try: d = json.loads(f.read_text(encoding='utf-8'))
+        except ValueError: continue
+        if isinstance(d, dict) and isinstance(d.get('instances'), list): exists |= {i['id'] for i in d['instances'] if isinstance(i, dict) and 'id' in i}
+    mf = Path(ws) / 'mappings.json'
+    maps = json.loads(mf.read_text(encoding='utf-8')).get('mappings', []) if mf.exists() else []
+    held = {(m['source']['id'], m['relationship'], m['target']['id']) for m in maps}
+    import glob
+    for pf in sorted(glob.glob(os.path.join(ws, 'aid', '*-proposals.json'))) + [os.path.join(ws, 'links', 'proposals.json')]:
+        if not os.path.exists(pf): continue
+        with open(pf, encoding='utf-8') as fh:
+            for m in json.load(fh).get('mappings', []):
+                k = (m['source']['id'], m['relationship'], m['target']['id'])
+                if k not in held: held.add(k); maps.append({**m, 'status': 'proposed'})
+    cross = []
+    for m in maps:
+        if m.get('status') not in SHOWN: continue
+        a, b = m['source']['id'], m['target']['id']
+        if a in dropped or b in dropped: continue
+        if a in idx and b in idx and nodes[idx[a]][2] > nodes[idx[b]][2]: a, b = b, a   # drawn from the upper layer down
+        cross.append((a, b, 1 if m['status'] == 'approved' else 0, m['relationship'], 0))
+    edges = []
+    for a, b, ok, rel, imp in inner + cross:
+        if a not in idx or b not in idx:
+            if a in exists and b in exists: continue   # a field, a location, an extension's record: in the workspace, not drawn here
+            raise PublishError(f'link {a} → {b} ({rel}) names a record not in the workspace')
+        edges.append([idx[a], idx[b], ok, rel] + ([imp] if imp else []))
+    tech = next(i for i, L in enumerate(stack) if L['id'] == 'technology')
+    return {
+        'source': {'workspace': os.path.basename(os.path.normpath(ws)), 'generator': GENERATOR},
+        'counts': {'records': len(nodes), 'inner': len(inner), 'mappings': len(cross), 'proposed': sum(1 for c in cross if c[2] == 0)},
+        'environment': environment, 'zone_links': zone_links, 'scale': round(scale * min(fits + [1]), 3),
+        'zones': zones, 'nodes': nodes, 'edges': edges,
+        'layers': [{'code': L['code'], 'name': PLATE_LOOK.get(L['id'], (L['name'],))[0], 'sub': PLATE_LOOK.get(L['id'], ('', ''))[1],
+                    'color': PLATE_LOOK.get(L['id'], ('', '', '#9aa0a6'))[2]} for L in stack],
+        'zoneLayer': tech,
+    }
 
 
 LAYERS = ('A1', 'A2', 'A3', 'A4')
@@ -704,15 +793,18 @@ def model_for(ws, name, environment='production', scale=0.5, need_mark=True):
     if is_020(ws):   # SDEM 0.20: the design's own layers, as SDEM numbers them — the site labels its plates with them and gives BIAN its own view
         from sdem import api
         stack = getattr(api, 'layers_in_use', lambda w: None)(ws)
-    with as_019(ws) as w:   # DL-23: a 0.20 workspace built as the site's four plates, then Data put on a plate of its own
-        model = _model_for(w, name, environment, scale, need_mark, origin=ws)
-        data_ids = _data_ids(w) if stack else None
-    if stack: model['workspace']['stack'] = stack
-    if data_ids is not None:
-        split_data_plate(model, data_ids, stack)
-        errs = validate({k: v for k, v in model.items() if k != 'workspace'})
-        if errs: raise PublishError('the five-plate model does not match its schema:\n  ' + '\n  '.join(errs[:10]))
-    return model
+    if stack:   # MIP-04 (MID-06): drawn from the design's own layers — no 0.19-shaped copy for the 3D model
+        v, mm = gates(ws, need_mark)
+        body = build_020(ws, scale, environment=environment)
+        model = {'format': 'desnre-model', 'format_version': 1, 'name': name, 'data': 'synthetic', **body, 'source': {**body['source'], 'sdem': v, 'metamodel': mm}}
+        errs = validate(model)
+        if errs: raise PublishError('the model does not match its schema:\n  ' + '\n  '.join(errs[:10]))
+        with as_019(ws) as w:   # the workbench's 0.19-shaped files, for pages that do not yet read the design's own form (retired in MIP-04 stage 3)
+            model['workspace'] = workspace_bundle(w, v, mm, origin=ws)
+        model['workspace']['stack'] = stack
+        return model
+    with as_019(ws) as w:
+        return _model_for(w, name, environment, scale, need_mark, origin=ws)
 
 
 DATA_TYPES = ('A3.DataEntity', 'A3.DataAttribute', 'A3.DataDomain')   # SDEM DAR-01: a data domain is Data's too

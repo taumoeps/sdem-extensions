@@ -307,8 +307,12 @@ class Form020Tests(unittest.TestCase):   # SDEM's DL-23: a workspace in the 0.20
         self.assertTrue(d.is_020(new) and not d.is_020(old))
         a, b = d.model_for(old, 'pi-check', need_mark=False), d.model_for(new, 'pi-check', need_mark=False)
         ids = lambda m: [n['id'] if isinstance(n, dict) else n[0] for n in m['nodes']]   # a node is [id, label, plate, …]
-        edges = lambda m: sorted(json.dumps([ids(m)[int(e[0])], ids(m)[int(e[1])], *e[2:]]) for e in m['edges'])
-        self.assertEqual(edges(a), edges(b))   # the same links — a few in another order
+        edges = lambda m: {tuple([ids(m)[int(e[0])], ids(m)[int(e[1])], *e[2:]]) for e in m['edges']}
+        # MIP-04: the same links — except access, which 0.19 held inside Application and the design's own form holds as an approved
+        # ACCESSED_BY between Data and Application (DL-04), drawn from Data down
+        data = d._data_ids(EXAMPLE)   # only an application's access to data moves between layers; access inside Business or BIAN stays
+        as20 = {(t, s_, 1, 'ACCESSED_BY') if r == 'access' and t in data and s_ not in data else (s_, t, ok, r, *rest) for s_, t, ok, r, *rest in edges(a)}
+        self.assertEqual(as20, edges(b))
         self.assertEqual(sorted(ids(a)), sorted(ids(b)))   # the same records
         self.assertEqual([l['code'] for l in b['layers']], ['A1', 'A2', 'A3', 'A4', 'A5'])   # SDEM 0.20: five plates, Data of its own
         self.assertEqual(len(b['zones']), 5); self.assertEqual(b['zoneLayer'], 4); self.assertNotIn('layers', a)

@@ -223,7 +223,8 @@
    "required_evidence": [
     "design_document"
    ],
-   "description": "the control protects it"
+   "description": "the control protects it",
+   "archimate": "association"
   },
   {
    "source_type": "SEC.S.SecurityControl",
@@ -232,7 +233,8 @@
    "required_evidence": [
     "design_document"
    ],
-   "description": "the control protects it"
+   "description": "the control protects it",
+   "archimate": "association"
   },
   {
    "source_type": "SEC.S.SecurityControl",
@@ -241,7 +243,8 @@
    "required_evidence": [
     "design_document"
    ],
-   "description": "the control protects it"
+   "description": "the control protects it",
+   "archimate": "association"
   },
   {
    "source_type": "SEC.S.SecurityControl",
@@ -251,7 +254,8 @@
     "design_document"
    ],
    "description": "the control protects it",
-   "requires": "ext:bian"
+   "requires": "ext:bian",
+   "archimate": "association"
   },
   {
    "source_type": "SEC.S.SecurityControl",
@@ -261,7 +265,8 @@
     "design_document"
    ],
    "description": "the control protects it",
-   "requires": "ext:bian"
+   "requires": "ext:bian",
+   "archimate": "association"
   },
   {
    "source_type": "SEC.S.SecurityControl",
@@ -270,7 +275,8 @@
    "required_evidence": [
     "design_document"
    ],
-   "description": "the control protects it"
+   "description": "the control protects it",
+   "archimate": "association"
   },
   {
    "source_type": "SEC.S.SecurityControl",
@@ -279,7 +285,8 @@
    "required_evidence": [
     "design_document"
    ],
-   "description": "the control protects it"
+   "description": "the control protects it",
+   "archimate": "association"
   },
   {
    "source_type": "SEC.S.SecurityControl",
@@ -288,7 +295,8 @@
    "required_evidence": [
     "design_document"
    ],
-   "description": "the control protects it"
+   "description": "the control protects it",
+   "archimate": "association"
   },
   {
    "source_type": "SEC.S.SecurityControl",
@@ -297,7 +305,8 @@
    "required_evidence": [
     "design_document"
    ],
-   "description": "the control protects it"
+   "description": "the control protects it",
+   "archimate": "association"
   },
   {
    "source_type": "SEC.S.SecurityControl",
@@ -306,7 +315,8 @@
    "required_evidence": [
     "design_document"
    ],
-   "description": "the control protects it"
+   "description": "the control protects it",
+   "archimate": "association"
   },
   {
    "source_type": "SEC.S.SecurityControl",
@@ -315,7 +325,8 @@
    "required_evidence": [
     "design_document"
    ],
-   "description": "the control protects it"
+   "description": "the control protects it",
+   "archimate": "association"
   },
   {
    "source_type": "SEC.S.SecurityControl",
@@ -324,7 +335,8 @@
    "required_evidence": [
     "design_document"
    ],
-   "description": "the control protects it"
+   "description": "the control protects it",
+   "archimate": "association"
   },
   {
    "source_type": "SEC.S.SecurityControl",
@@ -333,7 +345,8 @@
    "required_evidence": [
     "design_document"
    ],
-   "description": "the control protects it"
+   "description": "the control protects it",
+   "archimate": "association"
   },
   {
    "source_type": "SEC.S.SecurityControl",
@@ -342,7 +355,8 @@
    "required_evidence": [
     "design_document"
    ],
-   "description": "the control protects it"
+   "description": "the control protects it",
+   "archimate": "association"
   },
   {
    "source_type": "SEC.S.SecurityControl",
@@ -351,7 +365,8 @@
    "required_evidence": [
     "design_document"
    ],
-   "description": "it carries the control out"
+   "description": "it carries the control out",
+   "archimate": "realization"
   },
   {
    "source_type": "SEC.S.SecurityControl",
@@ -360,7 +375,8 @@
    "required_evidence": [
     "design_document"
    ],
-   "description": "it carries the control out"
+   "description": "it carries the control out",
+   "archimate": "realization"
   },
   {
    "source_type": "SEC.S.SecurityControl",
@@ -369,7 +385,8 @@
    "required_evidence": [
     "design_document"
    ],
-   "description": "it carries the control out"
+   "description": "it carries the control out",
+   "archimate": "realization"
   },
   {
    "source_type": "SEC.S.SecurityControl",
@@ -378,7 +395,8 @@
    "required_evidence": [
     "design_document"
    ],
-   "description": "it carries the control out"
+   "description": "it carries the control out",
+   "archimate": "realization"
   },
   {
    "source_type": "SEC.S.SecurityControl",
@@ -387,7 +405,8 @@
    "required_evidence": [
     "design_document"
    ],
-   "description": "it carries the control out"
+   "description": "it carries the control out",
+   "archimate": "realization"
   },
   {
    "source_type": "SEC.S.Threat",
@@ -396,7 +415,8 @@
    "required_evidence": [
     "design_document"
    ],
-   "description": "the threat applies to it"
+   "description": "the threat applies to it",
+   "archimate": "influence"
   },
   {
    "source_type": "SEC.S.Threat",
@@ -405,7 +425,8 @@
    "required_evidence": [
     "design_document"
    ],
-   "description": "the threat applies to it"
+   "description": "the threat applies to it",
+   "archimate": "influence"
   },
   {
    "source_type": "SEC.S.Threat",
@@ -414,7 +435,8 @@
    "required_evidence": [
     "design_document"
    ],
-   "description": "the threat applies to it"
+   "description": "the threat applies to it",
+   "archimate": "influence"
   },
   {
    "source_type": "SEC.S.Threat",
@@ -424,7 +446,8 @@
     "design_document"
    ],
    "description": "the threat applies to it",
-   "requires": "ext:bian"
+   "requires": "ext:bian",
+   "archimate": "influence"
   },
   {
    "source_type": "SEC.S.Threat",
@@ -434,7 +457,8 @@
     "design_document"
    ],
    "description": "the threat applies to it",
-   "requires": "ext:bian"
+   "requires": "ext:bian",
+   "archimate": "influence"
   },
   {
    "source_type": "SEC.S.Threat",
@@ -443,7 +467,8 @@
    "required_evidence": [
     "design_document"
    ],
-   "description": "the threat applies to it"
+   "description": "the threat applies to it",
+   "archimate": "influence"
   },
   {
    "source_type": "SEC.S.Threat",
@@ -452,7 +477,8 @@
    "required_evidence": [
     "design_document"
    ],
-   "description": "the threat applies to it"
+   "description": "the threat applies to it",
+   "archimate": "influence"
   },
   {
    "source_type": "SEC.S.Threat",
@@ -461,7 +487,8 @@
    "required_evidence": [
     "design_document"
    ],
-   "description": "the threat applies to it"
+   "description": "the threat applies to it",
+   "archimate": "influence"
   },
   {
    "source_type": "SEC.S.Threat",
@@ -470,7 +497,8 @@
    "required_evidence": [
     "design_document"
    ],
-   "description": "the threat applies to it"
+   "description": "the threat applies to it",
+   "archimate": "influence"
   },
   {
    "source_type": "SEC.S.Threat",
@@ -479,7 +507,8 @@
    "required_evidence": [
     "design_document"
    ],
-   "description": "the threat applies to it"
+   "description": "the threat applies to it",
+   "archimate": "influence"
   },
   {
    "source_type": "SEC.S.Threat",
@@ -488,7 +517,8 @@
    "required_evidence": [
     "design_document"
    ],
-   "description": "the threat applies to it"
+   "description": "the threat applies to it",
+   "archimate": "influence"
   },
   {
    "source_type": "SEC.S.Threat",
@@ -497,7 +527,8 @@
    "required_evidence": [
     "design_document"
    ],
-   "description": "the threat applies to it"
+   "description": "the threat applies to it",
+   "archimate": "influence"
   },
   {
    "source_type": "SEC.S.Threat",
@@ -506,7 +537,8 @@
    "required_evidence": [
     "design_document"
    ],
-   "description": "the threat applies to it"
+   "description": "the threat applies to it",
+   "archimate": "influence"
   },
   {
    "source_type": "SEC.S.Threat",
@@ -515,7 +547,8 @@
    "required_evidence": [
     "design_document"
    ],
-   "description": "the threat applies to it"
+   "description": "the threat applies to it",
+   "archimate": "influence"
   },
   {
    "source_type": "SEC.S.TrustBoundary",
@@ -524,7 +557,8 @@
    "required_evidence": [
     "design_document"
    ],
-   "description": "inside the boundary"
+   "description": "inside the boundary",
+   "archimate": "aggregation"
   },
   {
    "source_type": "SEC.S.TrustBoundary",
@@ -533,7 +567,8 @@
    "required_evidence": [
     "design_document"
    ],
-   "description": "inside the boundary"
+   "description": "inside the boundary",
+   "archimate": "aggregation"
   },
   {
    "source_type": "SEC.S.TrustBoundary",
@@ -542,7 +577,8 @@
    "required_evidence": [
     "design_document"
    ],
-   "description": "inside the boundary"
+   "description": "inside the boundary",
+   "archimate": "aggregation"
   },
   {
    "source_type": "SEC.S.SecurityControl",
@@ -551,7 +587,8 @@
    "required_evidence": [
     "design_document"
    ],
-   "description": "the control protects it"
+   "description": "the control protects it",
+   "archimate": "association"
   },
   {
    "source_type": "SEC.S.SecurityControl",
@@ -561,7 +598,8 @@
     "design_document"
    ],
    "description": "the control protects it",
-   "requires": "ext:bian"
+   "requires": "ext:bian",
+   "archimate": "association"
   },
   {
    "source_type": "SEC.S.SecurityControl",
@@ -570,7 +608,8 @@
    "required_evidence": [
     "design_document"
    ],
-   "description": "the control protects it"
+   "description": "the control protects it",
+   "archimate": "association"
   },
   {
    "source_type": "SEC.S.SecurityControl",
@@ -579,7 +618,8 @@
    "required_evidence": [
     "design_document"
    ],
-   "description": "the control protects it"
+   "description": "the control protects it",
+   "archimate": "association"
   },
   {
    "source_type": "SEC.S.Threat",
@@ -588,7 +628,8 @@
    "required_evidence": [
     "design_document"
    ],
-   "description": "the threat applies to it"
+   "description": "the threat applies to it",
+   "archimate": "influence"
   },
   {
    "source_type": "SEC.S.Threat",
@@ -597,7 +638,8 @@
    "required_evidence": [
     "design_document"
    ],
-   "description": "the threat applies to it"
+   "description": "the threat applies to it",
+   "archimate": "influence"
   },
   {
    "source_type": "SEC.S.Threat",
@@ -607,7 +649,8 @@
     "design_document"
    ],
    "description": "the threat applies to it",
-   "requires": "ext:bian"
+   "requires": "ext:bian",
+   "archimate": "influence"
   },
   {
    "source_type": "SEC.S.Threat",
@@ -616,7 +659,8 @@
    "required_evidence": [
     "design_document"
    ],
-   "description": "the threat applies to it"
+   "description": "the threat applies to it",
+   "archimate": "influence"
   },
   {
    "source_type": "SEC.S.Threat",
@@ -625,7 +669,8 @@
    "required_evidence": [
     "design_document"
    ],
-   "description": "the threat applies to it"
+   "description": "the threat applies to it",
+   "archimate": "influence"
   }
  ],
  "names": {

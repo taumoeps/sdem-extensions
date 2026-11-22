@@ -4,6 +4,10 @@ All made-up data. Rule ids: the [security aspect spec](docs/security-aspect-spec
 SDEM's [metamodel extensions](https://github.com/taumoeps/bian-sdem-framework/blob/main/docs/design/sdem-metamodel-extensions-spec.md) (MX-…) and
 [extension lifecycle](https://github.com/taumoeps/bian-sdem-framework/blob/main/docs/design/sdem-extension-lifecycle-spec.md) (EL-…) specs.
 
+## 0.4.3 — 2026-11-22
+
+- **Each link type says its ArchiMate kind** (SDEM MID-07, SDEM 0.21.3): PROTECTS is an *association*, ENFORCED_BY a *realization*, THREATENS an *influence*, BOUNDS an *aggregation* (`"archimate"` on each of the 45 link types); tested.
+
 ## 0.4.2 — 2026-11-22
 
 - **How it is drawn, declared** (SDEM MID-09): the manifest's `viewer.overlay` says which design layer each of S1–S5 overlays, how each of its types is drawn and placed (beside, below, or round what it links to) and how each link is drawn — so a viewer draws it with no code written for it.

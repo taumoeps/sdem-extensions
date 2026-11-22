@@ -154,3 +154,12 @@ class Hardening(unittest.TestCase):   # AUD-08, AUD-09, AUD-11
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class ArchiMateKinds(unittest.TestCase):   # SDEM MID-07: every link is ArchiMate's kind — the pack says which, for each of its link types
+    def test_every_link_type_says_its_archimate_relationship(self):
+        kinds = {'composition', 'aggregation', 'assignment', 'realization', 'serving', 'access', 'influence', 'triggering', 'flow', 'specialization', 'association'}
+        pack = json.loads((Path(S.__file__).parent / 'pack.json').read_text(encoding='utf-8'))
+        self.assertTrue(pack['link_types'])
+        for x in pack['link_types']:
+            self.assertIn(x.get('archimate'), kinds, f"{x['source_type']} {x['relationship']} {x['target_type']}")

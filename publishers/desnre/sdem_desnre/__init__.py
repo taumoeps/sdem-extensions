@@ -703,6 +703,7 @@ def workspace_bundle(ws, v, mm, origin=None):
         'documents': docs,
         **({'documents_by_layer': own_docs} if own_docs else {}),
         **({'chains': chains} if (chains := design_chains(o)) else {}),
+        **({'gaps': gaps} if (gaps := design_gaps(o)) else {}),
         **({'design': own} if (own := own_form(o, profile)) else {}),
         'status': no_local_paths(health(js(['status', '--workspace', str(ws), '--json'])), ws),
         'types': {L: (js(['types', L, '--workspace', str(ws), '--json']) or {}).get('types', []) for L in codes + tuple(added)},
@@ -739,19 +740,36 @@ def own_form(ws, profile=None):
     return {'form': '0.20', 'layers': layers, 'mappings': json.loads(mf.read_text(encoding='utf-8')).get('mappings', []) if mf.exists() else []}
 
 
+_ANSWERS = {}
 def design_chains(ws):
     """MIP-03 (SDEM's metamodel integrity plan; MID-02): every record's full trace, worked out by SDEM (`sdem trace ALL`) on the design
     itself, so the site lights what SDEM computed and never walks the graph on its own. None with an SDEM that cannot (before 0.21)."""
+    return _answers(ws).get('chains')
+
+
+def design_gaps(ws):
+    """MIP-05, MID-02: every record accounted for, and each layer's figures (`sdem trace GAPS`), worked out by SDEM — the Health tab shows
+    them. None with an SDEM that cannot (before 0.21.2)."""
+    return _answers(ws).get('gaps')
+
+
+def _answers(ws):
+    """SDEM's answers that need the design's graph — built once for both."""
+    key = (str(Path(ws).resolve()), max((f.stat().st_mtime_ns for f in Path(ws).glob('*.json')), default=0))   # the design as it is now
+    if key in _ANSWERS: return _ANSWERS[key]
+    out = {}
     with tempfile.TemporaryDirectory() as t:
         g = Path(t) / 'graph'
-        if run_sdem(ws, ['build', '--workspace', str(ws), '-o', str(g)]).returncode != 0: return None
-        r = run_sdem(ws, ['trace', 'ALL', '--graph', str(g), '--json'])
-        if r.returncode != 0: return None
-        try:
-            d = json.loads(r.stdout)
-        except ValueError:
-            return None
-        return d if d.get('format') == 'sdem-chains/1' else None
+        if run_sdem(ws, ['build', '--workspace', str(ws), '-o', str(g)]).returncode == 0:
+            for name, arg, fmt in (('chains', 'ALL', 'sdem-chains/1'), ('gaps', 'GAPS', 'sdem-gaps/1')):
+                r = run_sdem(ws, ['trace', arg, '--graph', str(g), '--json'])
+                try:
+                    d = json.loads(r.stdout) if r.returncode == 0 else None
+                except ValueError:
+                    d = None
+                if isinstance(d, dict) and d.get('format') == fmt: out[name] = d
+    _ANSWERS.clear(); _ANSWERS[key] = out
+    return out
 
 
 def health(st):

@@ -79,6 +79,11 @@ class Checks(unittest.TestCase):
         r = {x['id']: x for x in S.coverage_rows(self.ws)}['F-NAME']
         self.assertTrue(r['protected']); self.assertEqual(r['protected_through'], ['ENT-LOG'])
 
+    def test_protection_inherited_from_a_protected_whole_is_said_not_counted(self):   # MID-02: the view shows it, SDEM works it out
+        r = {x['id']: x for x in S.coverage_rows(self.ws)}
+        self.assertFalse(r['API-OP']['protected']); self.assertEqual(r['API-OP']['inherited_from'], ['IFC-API'])   # its interface's control
+        self.assertNotIn('inherited_from', r['IFC-API'])                                                          # protected itself
+
     def test_an_empty_security_layer_is_said(self):
         self.assertEqual(self.found('SEC-LAYER'), {'S1': 'unresolved', 'S2': 'unresolved', 'S5': 'unresolved'})
 

@@ -170,6 +170,22 @@ def coverage_rows(ws):
             ents = sorted({l['source'] for l in rels if l.get('target') == x['id'] and ent(l['source'])} | {l['target'] for l in rels if l.get('source') == x['id'] and ent(l['target'])})
             via = [e for e in ents if by_id[e]['protected']]
             if via: x['protected'] = True; x['protected_through'] = via
+    # MID-02: protection a record inherits — a control protects a whole that holds it (its service domain, its zone, its group), climbing
+    # composition and aggregation; said beside 'protected', never counted as a control of its own. A view shows it; it does not work it out.
+    guarded = {m['target']['id'] for m in maps if m['relationship'] == 'PROTECTS' and active_control(recs, m['source']['id'])}
+    wholes = {}
+    for l in rels:
+        if l.get('kind') in ('composition', 'aggregation') and l.get('source') != l.get('target'): wholes.setdefault(l['target'], set()).add(l['source'])
+    for x in rows:
+        if x['protected']: continue
+        seen, todo, via = set(), list(wholes.get(x['id'], ())), []
+        while todo:
+            w = todo.pop()
+            if w in seen: continue
+            seen.add(w)
+            if w in guarded: via.append(w)
+            else: todo += list(wholes.get(w, ()))
+        if via: x['inherited_from'] = sorted(via)
     return rows
 
 

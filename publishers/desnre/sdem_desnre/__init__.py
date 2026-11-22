@@ -757,7 +757,14 @@ def design_integrity(ws):
         d = json.loads(r.stdout) if r.returncode == 0 else None
     except ValueError:
         return None
-    return no_local_paths(d, ws) if isinstance(d, dict) and d.get('format') == 'sdem-integrity/1' else None
+    if not (isinstance(d, dict) and d.get('format') == 'sdem-integrity/1'): return None
+    v = run_sdem(ws, ['model', 'integrity', '--workspace', str(ws), '--check', '--json'])   # SDEM's verdict, rule by rule (SDEM 0.21.6) — met or not, never the site's
+    try:
+        vj = json.loads(v.stdout) if v.returncode in (0, 1) else None
+    except ValueError:
+        vj = None
+    if isinstance(vj, dict) and vj.get('format') == 'sdem-integrity-check/1': d['check'] = vj
+    return no_local_paths(d, ws)
 
 
 def design_gaps(ws):

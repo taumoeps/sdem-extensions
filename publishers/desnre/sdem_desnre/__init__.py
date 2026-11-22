@@ -607,11 +607,27 @@ def workspace_bundle(ws, v, mm, origin=None):
         'check': no_local_paths(js(['check', '--workspace', str(ws), '--json']), ws),
         'documents': docs,
         **({'documents_by_layer': own_docs} if own_docs else {}),
+        **({'chains': chains} if (chains := design_chains(o)) else {}),
         'status': no_local_paths(health(js(['status', '--workspace', str(ws), '--json'])), ws),
         'types': {L: (js(['types', L, '--workspace', str(ws), '--json']) or {}).get('types', []) for L in LAYERS + tuple(added)},
         'viewpoints': viewpoints(js),   # ARV-23: the viewpoint definitions SDEM defines (each type's ArchiMate notation is in 'types')
         'layouts': {L: js(['layout', '--layer', L, '--workspace', str(ws), '--json']) for L in LAYERS},
     }
+
+
+def design_chains(ws):
+    """MIP-03 (SDEM's metamodel integrity plan; MID-02): every record's full trace, worked out by SDEM (`sdem trace ALL`) on the design
+    itself, so the site lights what SDEM computed and never walks the graph on its own. None with an SDEM that cannot (before 0.21)."""
+    with tempfile.TemporaryDirectory() as t:
+        g = Path(t) / 'graph'
+        if run_sdem(ws, ['build', '--workspace', str(ws), '-o', str(g)]).returncode != 0: return None
+        r = run_sdem(ws, ['trace', 'ALL', '--graph', str(g), '--json'])
+        if r.returncode != 0: return None
+        try:
+            d = json.loads(r.stdout)
+        except ValueError:
+            return None
+        return d if d.get('format') == 'sdem-chains/1' else None
 
 
 def health(st):

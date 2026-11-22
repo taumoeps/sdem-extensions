@@ -67,7 +67,7 @@ class SecurityTests(unittest.TestCase):
         self.assertEqual(ent['stated'], ['I']); self.assertNotIn('I', ent['not_yet_considered'])
 
     def test_the_standard_checks_protocol_and_likelihood_too(self):  # SEC-S03b, SEC-S06b
-        ids = {r['id'] for r in json.loads((Path(S.__file__).parent / 'security-standard.json').read_text())['rules']}
+        ids = {r['id'] for r in json.loads((Path(S.__file__).parent / 'security-standard.json').read_text(encoding='utf-8'))['rules']}
         self.assertTrue({'SEC-S03a', 'SEC-S03b', 'SEC-S06a', 'SEC-S06b'} <= ids)
 
     def test_a_security_requirement_no_control_meets_is_found(self):  # SEC-S07
@@ -116,12 +116,12 @@ class SecurityTests(unittest.TestCase):
         found = {f['rule'] for f in run('security', 'review', '--workspace', self.ws, '--json')['findings'] if f['outcome'] in ('non_compliant', 'unresolved')}
         for rule in ('SEC-S09', 'SEC-S10', 'SEC-S11', 'SEC-S12', 'SEC-S13', 'SEC-S14', 'SEC-S15'): self.assertIn(rule, found)
         here = Path(S.__file__).parent
-        rules = json.loads((here / 'security-standard.json').read_text())['rules'] + json.loads((here / 'pack.json').read_text())['computed_rules']
+        rules = json.loads((here / 'security-standard.json').read_text(encoding='utf-8'))['rules'] + json.loads((here / 'pack.json').read_text(encoding='utf-8'))['computed_rules']
         layers = {r['id']: r['message'].rsplit('— ', 1)[-1].split(';')[0] for r in rules if r['id'] >= 'SEC-S09'}
         self.assertEqual(sorted(set(layers.values())), ['S1', 'S2', 'S3', 'S4', 'S5'])      # one rule or more for every security layer
 
     def test_a_control_may_name_other_standards_by_reference(self):   # SX-13
-        a = {x['name']: x for x in json.loads((Path(S.__file__).parent / 'pack.json').read_text())['attributes'] if x['entity'] == 'SEC.S.SecurityControl'}
+        a = {x['name']: x for x in json.loads((Path(S.__file__).parent / 'pack.json').read_text(encoding='utf-8'))['attributes'] if x['entity'] == 'SEC.S.SecurityControl'}
         self.assertEqual(a['also_satisfies']['type'], 'list<string>'); self.assertNotIn('required', a['also_satisfies'])
 
     @unittest.skipUnless(HAS_MX16, 'needs SDEM 0.19.0 as tagged on 2026-11-19 or later (MX-16, MX-17)')
@@ -144,6 +144,7 @@ class SecurityTests(unittest.TestCase):
         self.assertTrue(any(i.startswith(('APP-', 'CMP-')) for i in down))                            # the application below
         self.assertNotIn('THR-DISCLOSE', up | down)                                                   # not the threat it mitigates
 
+    @unittest.skipUnless(HAS_FT09, 'this SDEM classifies impact by the first path it walks (before KG-Q-09, SDEM 0.21)')
     def test_impact_names_a_linked_control_as_directly_affected(self):   # SDEM KG-Q-09: by the shortest path, never 'no_impact' through a longer one
         ws = self.tmp / 'ws-impact'; shutil.copytree(self.ws, ws)   # a control on the domain, enforced by the application that realises it: two paths to the control
         for src, rel, tgt in (('SEC-SC28', 'PROTECTS', 'SD-PI'), ('SEC-SC28', 'ENFORCED_BY', 'APP-PAY-HUB')):
@@ -163,7 +164,7 @@ class SecurityTests(unittest.TestCase):
         self.assertTrue(d['connections_retired']); self.assertFalse((ws / 'security.json').exists())
         self.assertTrue((ws / d['archive']).exists())
         self.assertTrue(run('check', '--workspace', ws, '--require-recorded', '--json')['ok'])
-        self.assertNotIn('ext:security', json.loads((ws / 'sdem-profile.json').read_text())['includes'])
+        self.assertNotIn('ext:security', json.loads((ws / 'sdem-profile.json').read_text(encoding='utf-8'))['includes'])
         back = run('security', 'restore', '--archive', d['archive'], '--workspace', ws, '--person', 'steven', '--reason', 'back on', '--json')   # EL-06
         self.assertTrue((ws / 'security.json').exists()); self.assertEqual(sorted(back['connections']), sorted(d['connections_retired']))
         run('security', 'remove', '--workspace', ws, '--person', 'steven', '--reason', 'off again')

@@ -342,3 +342,12 @@ class Form020Tests(unittest.TestCase):   # SDEM's DL-23: a workspace in the 0.20
         with self.assertRaises(d.PublishError) as e:
             d.cmd_pull(type('A', (), {'workspace': str(ws), 'site': None, 'name': None})())
         self.assertIn("0.20", str(e.exception))
+
+
+class OneVersion(unittest.TestCase):   # the manifest a site and SDEM read says the same version as the package (desnre 0.11.1–0.11.3 said 0.11.0)
+    def test_manifest_and_package_agree(self):
+        import re
+        here = Path(__file__).resolve().parents[1]
+        pkg = re.search(r'^version = "([^"]+)"', (here / 'pyproject.toml').read_text(encoding='utf-8'), re.M).group(1)
+        man = json.loads((here / 'sdem_desnre' / 'sdem-extension.json').read_text(encoding='utf-8'))['version']
+        self.assertEqual(man, pkg)

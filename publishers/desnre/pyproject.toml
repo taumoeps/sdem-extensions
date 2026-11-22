@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "sdem-desnre"
-version = "0.11.3"
+version = "0.11.4"
 description = "An SDEM extension: puts a made-up SDEM workspace on the DESNRE site's 3D view (sdem desnre create / publish)"
 requires-python = ">=3.9"
 license = {text = "Apache-2.0"}

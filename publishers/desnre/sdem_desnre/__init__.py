@@ -705,6 +705,7 @@ def workspace_bundle(ws, v, mm, origin=None):
         **({'documents_by_layer': own_docs} if own_docs else {}),
         **({'chains': chains} if (chains := design_chains(o)) else {}),
         **({'gaps': gaps} if (gaps := design_gaps(o)) else {}),
+        **({'integrity': ig} if (ig := design_integrity(o)) else {}),
         **({'design': own} if (own := own_form(o, profile)) else {}),
         'status': no_local_paths(health(js(['status', '--workspace', str(ws), '--json'])), ws),
         'types': {L: (js(['types', L, '--workspace', str(ws), '--json']) or {}).get('types', []) for L in codes + tuple(added)},
@@ -746,6 +747,17 @@ def design_chains(ws):
     """MIP-03 (SDEM's metamodel integrity plan; MID-02): every record's full trace, worked out by SDEM (`sdem trace ALL`) on the design
     itself, so the site lights what SDEM computed and never walks the graph on its own. None with an SDEM that cannot (before 0.21)."""
     return _answers(ws).get('chains')
+
+
+def design_integrity(ws):
+    """MID-01…MID-10: the design in the metamodel integrity reference shape (`sdem model integrity`) — core, extensions, federated and
+    local graphs — for the Health, Metamodel and Knowledge Graph views to draw. None with an SDEM that cannot (before 0.21.4)."""
+    r = run_sdem(ws, ['model', 'integrity', '--workspace', str(ws), '--json'])
+    try:
+        d = json.loads(r.stdout) if r.returncode == 0 else None
+    except ValueError:
+        return None
+    return no_local_paths(d, ws) if isinstance(d, dict) and d.get('format') == 'sdem-integrity/1' else None
 
 
 def design_gaps(ws):

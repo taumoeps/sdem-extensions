@@ -394,6 +394,17 @@ def build(ws, scale, topology=True, environment='production'):
 GRAPH_LOOK = {'S': ('Security Architecture', 'controls, threats and trust boundaries — the Security extension\'s graph', '#ef5350')}
 
 
+def integrity_graph(ws):
+    """MID-02: every record and every link inside and between the graphs (`sdem model integrity --graph`) — the Knowledge Graph tab's tables
+    are drawn from it, never from the files. None with an SDEM that cannot (before 0.21.7)."""
+    r = run_sdem(ws, ['model', 'integrity', '--workspace', str(ws), '--graph', '--json'])
+    try:
+        g = json.loads(r.stdout) if r.returncode == 0 else None
+    except ValueError:
+        return None
+    return no_local_paths(g, ws) if isinstance(g, dict) and g.get('format') == 'sdem-integrity-graph/1' else None
+
+
 def build_integrity(ws, scale, what='--graph'):
     """MID-01, MID-02: the Metamodel viewpoint drawn from SDEM's own knowledge graphs alone (`sdem model integrity --graph`) — every record of
     every graph, the extensions' too, placed by SDEM; every link inside a graph and every link between graphs, each an ArchiMate relationship.
@@ -751,7 +762,8 @@ def workspace_bundle(ws, v, mm, origin=None):
         **({'chains': chains} if (chains := design_chains(o)) else {}),
         **({'gaps': gaps} if (gaps := design_gaps(o)) else {}),
         **({'integrity': ig} if (ig := design_integrity(o)) else {}),
-        **({'metamodel_view': mv} if (mv := build_integrity(o, 0.5, '--metamodel')) else {}),   # the Metamodel Core and Extensions drawn (SDEM 0.21.8)
+        **({'metamodel_view': mv} if (mv := build_integrity(o, 0.5, '--metamodel')) else {}),
+        **({'integrity_graph': ig2} if (ig2 := integrity_graph(o)) else {}),   # the Knowledge Graph tab's records and links, as SDEM gives them   # the Metamodel Core and Extensions drawn (SDEM 0.21.8)
         **({'design': own} if (own := own_form(o, profile)) else {}),
         'status': no_local_paths(health(js(['status', '--workspace', str(ws), '--json'])), ws),
         'types': {L: (js(['types', L, '--workspace', str(ws), '--json']) or {}).get('types', []) for L in codes + tuple(added)},

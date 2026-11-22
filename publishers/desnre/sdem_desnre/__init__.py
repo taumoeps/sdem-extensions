@@ -582,7 +582,8 @@ def extension_states(ws, files, results):
                          'results': results.get(name) or {}, 'results_at': now if results.get(name) else None,
                          **({'description': man['description']} if isinstance(man.get('description'), str) else {}),   # XA-05: what the agent lists
                          **({'scope': {k: v for k, v in man['scope'].items() if k in ('across', 'within')}} if isinstance(man.get('scope'), dict) else {}),   # MX-18: a layer of its own, or types within one
-                         'reports': reports(man), 'agent_guide': agent_guide(man)}
+                         'reports': reports(man), 'agent_guide': agent_guide(man),
+                         **({'overlay': man['viewer']['overlay']} if isinstance((man.get('viewer') or {}).get('overlay'), dict) else {})}   # MID-09: how a viewer draws it
         else:
             d = off_d[name]; det = d.get('details') or {}
             out[name] = {'state': 'off', 'since': (d.get('at') or '')[:10] or None, 'by': d.get('named_person'), 'reason': det.get('reason'),

@@ -4,6 +4,10 @@ All made-up data. Rule ids: the [security aspect spec](docs/security-aspect-spec
 SDEM's [metamodel extensions](https://github.com/taumoeps/bian-sdem-framework/blob/main/docs/design/sdem-metamodel-extensions-spec.md) (MX-…) and
 [extension lifecycle](https://github.com/taumoeps/bian-sdem-framework/blob/main/docs/design/sdem-extension-lifecycle-spec.md) (EL-…) specs.
 
+## 0.4.2 — 2026-11-22
+
+- **How it is drawn, declared** (SDEM MID-09): the manifest's `viewer.overlay` says which design layer each of S1–S5 overlays, how each of its types is drawn and placed (beside, below, or round what it links to) and how each link is drawn — so a viewer draws it with no code written for it.
+
 ## 0.4.1 — 2026-11-22
 
 - **Protection inherited from a protected whole is said** (SDEM MID-02): `sdem security coverage` gives `inherited_from` — the whole (an interface, a service domain, a zone) whose control covers a record with none of its own, climbing composition and aggregation. Said beside `protected`, never counted as a control of the record's own; a view shows it instead of working it out.

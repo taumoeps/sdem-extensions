@@ -75,6 +75,17 @@ class Checks(unittest.TestCase):
         self.assertFalse([t for t in S.THREATENABLE if t not in S.STRIDE], 'every type a threat can threaten has its STRIDE categories')
         self.assertEqual(S.STRIDE['A1.BusinessProcess'], 'STRIDE'); self.assertIn('R', S.STRIDE['A3.APIOperation'])   # AUD-07, spec §7
 
+    def test_a_retired_record_is_not_in_coverage(self):   # 0.4.4, SDEM MID-02 / LC-04: it has left the design
+        self.a3['instances'].append(rec('APP-GONE', 'A3.ApplicationComponent', 'retired')); self.write()
+        self.assertNotIn('APP-GONE', {r['id'] for r in S.coverage_rows(self.ws)})
+
+    def test_the_viewer_draws_each_link_as_the_pack_says(self):   # 0.4.4, SDEM MID-07: one ArchiMate kind per link type — the manifest's overlay never differs
+        import json as J
+        here = Path(S.__file__).parent
+        pack = {x['relationship']: x['archimate'] for x in J.loads((here / 'pack.json').read_text())['link_types']}
+        links = J.loads((here / 'sdem-extension.json').read_text())['viewer']['overlay']['links']
+        for rel, kind in links.items(): self.assertEqual(kind, pack[rel], rel)
+
     def test_a_field_is_protected_through_its_entity(self):
         r = {x['id']: x for x in S.coverage_rows(self.ws)}['F-NAME']
         self.assertTrue(r['protected']); self.assertEqual(r['protected_through'], ['ENT-LOG'])

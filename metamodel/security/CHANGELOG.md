@@ -4,6 +4,11 @@ All made-up data. Rule ids: the [security aspect spec](docs/security-aspect-spec
 SDEM's [metamodel extensions](https://github.com/taumoeps/bian-sdem-framework/blob/main/docs/design/sdem-metamodel-extensions-spec.md) (MX-…) and
 [extension lifecycle](https://github.com/taumoeps/bian-sdem-framework/blob/main/docs/design/sdem-extension-lifecycle-spec.md) (EL-…) specs.
 
+## 0.4.4 — 2026-11-23
+
+- **A retired record is not in coverage** (SDEM MID-02, LC-04): it has left the design, so `sdem-security coverage` neither counts it nor lists it — the Payment example's retired Notification service and its deployment are gone from its answer; tested.
+- **The viewer draws each link as the pack says** (SDEM MID-07): the manifest's `viewer.overlay.links` said PROTECTS *serving* and THREATENS *flow* while the pack says *association* and *influence*; they are now the pack's kinds, BOUNDS (*aggregation*) added; a test keeps them equal.
+
 ## 0.4.3 — 2026-11-22
 
 - **Each link type says its ArchiMate kind** (SDEM MID-07, SDEM 0.21.3): PROTECTS is an *association*, ENFORCED_BY a *realization*, THREATENS an *influence*, BOUNDS an *aggregation* (`"archimate"` on each of the 45 link types); tested.

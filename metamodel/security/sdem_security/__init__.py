@@ -154,6 +154,7 @@ def coverage_rows(ws):
         L = layer_of[rid]
         ct = core_type(ws, r['type'])
         if L == 'S' or ct not in PROTECTABLE: continue
+        if r.get('lifecycle_status') == 'retired': continue   # MID-02 (SDEM LC-04): a retired record has left the design — nothing to protect
         named = [m['source']['id'] for m in by('PROTECTS', 0) if m['target']['id'] == rid]
         controls = [c for c in named if active_control(recs, c)]
         threats = [m['source']['id'] for m in by('THREATENS', 0) if m['target']['id'] == rid]

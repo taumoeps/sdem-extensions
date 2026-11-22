@@ -656,13 +656,19 @@ def workspace_bundle(ws, v, mm, origin=None):
         r = run_sdem(ws, args)
         try: return json.loads(r.stdout)
         except ValueError: return None
+    own020 = is_020(ws)   # MIP-04 (MID-06): a design in 0.20's form is bundled as it is — its own files, numbered as SDEM numbers it
+    if own020:
+        from sdem import api
+        stack = getattr(api, 'layers_in_use', lambda w: None)(ws) or []
+        codes, ws_files = tuple(x['code'] for x in stack), [f"{x['id']}.json" for x in stack] + ['mappings.json', 'requirements.json', 'sdem-profile.json']
+    else: codes, ws_files = LAYERS, WS_FILES
     files = {}
-    for f in WS_FILES:
+    for f in ws_files:
         p = Path(ws) / f
         if p.exists():
             files[f] = json.loads(p.read_text(encoding='utf-8'))
     docs = {}
-    for L in LAYERS:
+    for L in codes:
         r = run_sdem(ws, ['document', '--workspace', str(ws), '--layer', L])
         if r.returncode == 0: docs[L] = r.stdout
     profile, profile_files = None, {}
@@ -677,7 +683,7 @@ def workspace_bundle(ws, v, mm, origin=None):
     for l in ((profile or {}).get('layers') or []):   # a profile's own layers — e.g. the security architecture's security.json (MX, LR-11)
         p = Path(ws) / l.get('file', '')
         if l.get('file') and p.is_file() and l['file'] not in files: files[l['file']] = json.loads(p.read_text(encoding='utf-8'))
-    added = [l['code'] for l in ((profile or {}).get('layers') or []) if l.get('code') and l['code'] not in LAYERS]
+    added = [l['code'] for l in ((profile or {}).get('layers') or []) if l.get('code') and l['code'] not in codes]
     for L in added:   # 0.7.7: an added layer's document and kinds of record too — the workbench's Document Output and Metamodel for e.g. Security
         r = run_sdem(ws, ['document', '--workspace', str(ws), '--layer', L])
         if r.returncode == 0: docs[L] = r.stdout
@@ -699,9 +705,9 @@ def workspace_bundle(ws, v, mm, origin=None):
         **({'chains': chains} if (chains := design_chains(o)) else {}),
         **({'design': own} if (own := own_form(o, profile)) else {}),
         'status': no_local_paths(health(js(['status', '--workspace', str(ws), '--json'])), ws),
-        'types': {L: (js(['types', L, '--workspace', str(ws), '--json']) or {}).get('types', []) for L in LAYERS + tuple(added)},
+        'types': {L: (js(['types', L, '--workspace', str(ws), '--json']) or {}).get('types', []) for L in codes + tuple(added)},
         'viewpoints': viewpoints(js),   # ARV-23: the viewpoint definitions SDEM defines (each type's ArchiMate notation is in 'types')
-        'layouts': {L: js(['layout', '--layer', L, '--workspace', str(ws), '--json']) for L in LAYERS},
+        'layouts': {L: js(['layout', '--layer', L, '--workspace', str(ws), '--json']) for L in codes},
     }
 
 
@@ -799,8 +805,7 @@ def model_for(ws, name, environment='production', scale=0.5, need_mark=True):
         model = {'format': 'desnre-model', 'format_version': 1, 'name': name, 'data': 'synthetic', **body, 'source': {**body['source'], 'sdem': v, 'metamodel': mm}}
         errs = validate(model)
         if errs: raise PublishError('the model does not match its schema:\n  ' + '\n  '.join(errs[:10]))
-        with as_019(ws) as w:   # the workbench's 0.19-shaped files, for pages that do not yet read the design's own form (retired in MIP-04 stage 3)
-            model['workspace'] = workspace_bundle(w, v, mm, origin=ws)
+        model['workspace'] = workspace_bundle(ws, v, mm, origin=ws)   # the design itself, in its own form — no 0.19-shaped copy
         model['workspace']['stack'] = stack
         return model
     with as_019(ws) as w:
@@ -1082,6 +1087,16 @@ def differs(local, web):
     return out
 
 
+def layer_file(ws, code):
+    """MIP-04: the file a layer lives in — the design's own (data.json, numbered as SDEM numbers the design) or 0.19's four."""
+    if is_020(ws):
+        from sdem import api
+        x = next((l for l in (getattr(api, 'layers_in_use', lambda w: None)(ws) or []) if l['code'] == code), None)
+        if x: return f"{x['id']}.json"
+        raise PublishError(f'layer {code}: not a layer of this design')
+    return FILES[LAYERS.index(code)]
+
+
 def merge(ws, c, mode):
     """DW-53: a change set from the site, against the workspace as it is now. Each record it changes is compared with what it was on
     the site when the change was made (`before`): the same in the workspace — a clean merge; already as the web has it — nothing to
@@ -1096,7 +1111,7 @@ def merge(ws, c, mode):
         if was is not _NONE and local != was:
             return (c if mode == 'take-web' else None), [('sdem-profile.json', ['the profile was changed in the workspace and on the web'])]
         return c, []
-    data = json.loads((Path(ws) / FILES[LAYERS.index(c['layer'])]).read_text(encoding='utf-8'))
+    data = json.loads((Path(ws) / layer_file(ws, c['layer'])).read_text(encoding='utf-8'))
     byid = {r['id']: r for r in data.get('instances', [])}
     rels = data.get('relationships', [])
     has = lambda x: any((y['source'], y['kind'], y['target']) == (x['source'], x['kind'], x['target']) for y in rels)

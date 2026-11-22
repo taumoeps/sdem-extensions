@@ -391,6 +391,47 @@ def build(ws, scale, topology=True, environment='production'):
 
 
 
+GRAPH_LOOK = {'S': ('Security Architecture', 'controls, threats and trust boundaries — the Security extension\'s graph', '#ef5350')}
+
+
+def build_integrity(ws, scale):
+    """MID-01, MID-02: the Metamodel viewpoint drawn from SDEM's own knowledge graphs alone (`sdem model integrity --graph`) — every record of
+    every graph, the extensions' too, placed by SDEM; every link inside a graph and every link between graphs, each an ArchiMate relationship.
+    None with an SDEM that cannot (before 0.21.7) — then the layout-based model is drawn as before."""
+    r = run_sdem(ws, ['model', 'integrity', '--workspace', str(ws), '--graph', '--json'])
+    try:
+        g = json.loads(r.stdout) if r.returncode == 0 else None
+    except ValueError:
+        g = None
+    if not (isinstance(g, dict) and g.get('format') == 'sdem-integrity-graph/1'): return None
+    from sdem import api
+    stack = {x['code']: x for x in (getattr(api, 'layers_in_use', lambda w: None)(ws) or [])}
+    SH = {k.split('.')[-1]: v for k, v in SHAPE.items()}
+    SH.update({'SecurityControl': 'doc', 'Threat': 'evt', 'TrustBoundary': 'node', 'DataDomain': 'obj', 'NetworkZone': 'node'})
+    codes = [x['code'] for x in g['graphs']]
+    def rect(q): return [round(c, 3) for c in (*plate(q[0], q[1]), *plate(q[2], q[3]))]
+    nodes, idx = [], {}
+    for x in g['records']:
+        l = codes.index(x['graph']); fx, fz = plate(*x['at']); idx[x['id']] = len(nodes)
+        nodes.append([x['id'], x['name'], l, round(fx, 3), round(fz, 3), SH.get(x['kind'], 'obj'), readable(x.get('type')), x['graph'] + ':' + x['group']])
+    zones = [[[z['label'], *rect(z['rect']), x['code'] + ':' + z['label'].split(' · ')[0], None] for z in (g['zones'].get(x['code']) or [])] for x in g['graphs']]
+    edges = []
+    for k in g['links']:
+        a, b = idx.get(k['source']), idx.get(k['target'])
+        if a is None or b is None: continue
+        if k['scope'] == 'between' and nodes[a][2] > nodes[b][2]: a, b = b, a   # drawn from the upper graph down
+        edges.append([a, b, 0 if k['status'] == 'proposed' else (1 if k['scope'] == 'between' else 2), k.get('relationship') or k.get('kind')])
+    def look(x):
+        L = stack.get(x['code']) or {}
+        return GRAPH_LOOK.get(x['code']) or PLATE_LOOK.get(L.get('id'), (x['name'], '', '#9aa0a6'))
+    tech = next((i for i, x in enumerate(g['graphs']) if (stack.get(x['code']) or {}).get('id') == 'technology'), len(codes) - 1)
+    c = g['counts']
+    return {'source': {'workspace': os.path.basename(os.path.normpath(ws)), 'generator': GENERATOR, 'from': 'sdem model integrity --graph'},
+            'counts': {'records': c['records'], 'inner': c['inside'], 'mappings': c['between'] + c['proposed'], 'proposed': c['proposed']},
+            'environment': 'all', 'zone_links': [], 'scale': scale, 'zones': zones, 'nodes': nodes, 'edges': edges,
+            'layers': [{'code': x['code'], 'name': look(x)[0], 'sub': look(x)[1], 'color': look(x)[2]} for x in g['graphs']], 'zoneLayer': tech}
+
+
 def build_020(ws, scale, environment='production'):
     """MIP-04 (MID-06): a design in SDEM 0.20's form drawn from its own layers — one plate per layer of its stack (Business, BIAN where it is
     on, Data, Application, Technology), each laid out by SDEM itself (`sdem layout --layer <code>`; Technology by its network zones), types
@@ -839,7 +880,7 @@ def model_for(ws, name, environment='production', scale=0.5, need_mark=True):
         stack = getattr(api, 'layers_in_use', lambda w: None)(ws)
     if stack:   # MIP-04 (MID-06): drawn from the design's own layers — no 0.19-shaped copy for the 3D model
         v, mm = gates(ws, need_mark)
-        body = build_020(ws, scale, environment=environment)
+        body = build_integrity(ws, scale) or build_020(ws, scale, environment=environment)   # MID-01: from SDEM's knowledge graphs where SDEM gives them
         model = {'format': 'desnre-model', 'format_version': 1, 'name': name, 'data': 'synthetic', **body, 'source': {**body['source'], 'sdem': v, 'metamodel': mm}}
         errs = validate(model)
         if errs: raise PublishError('the model does not match its schema:\n  ' + '\n  '.join(errs[:10]))

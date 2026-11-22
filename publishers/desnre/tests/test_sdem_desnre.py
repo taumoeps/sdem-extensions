@@ -305,7 +305,9 @@ class Form020Tests(unittest.TestCase):   # SDEM's DL-23: a workspace in the 0.20
         shutil.copytree(EXAMPLE_NOW, new, ignore=shutil.ignore_patterns('graph', 'migrations'))
         shutil.copytree(EXAMPLE, old, ignore=shutil.ignore_patterns('graph', 'migrations'))
         self.assertTrue(d.is_020(new) and not d.is_020(old))
-        a, b = d.model_for(old, 'pi-check', need_mark=False), d.model_for(new, 'pi-check', need_mark=False)
+        keep = d.build_integrity; d.build_integrity = lambda ws, scale: None   # the layout-based model (an SDEM before 0.21.7): the same design either form
+        try: a, b = d.model_for(old, 'pi-check', need_mark=False), d.model_for(new, 'pi-check', need_mark=False)
+        finally: d.build_integrity = keep
         ids = lambda m: [n['id'] if isinstance(n, dict) else n[0] for n in m['nodes']]   # a node is [id, label, plate, …]
         edges = lambda m: {tuple([ids(m)[int(e[0])], ids(m)[int(e[1])], *e[2:]]) for e in m['edges']}
         # MIP-04: the same links — except access, which 0.19 held inside Application and the design's own form holds as an approved
@@ -319,6 +321,17 @@ class Form020Tests(unittest.TestCase):   # SDEM's DL-23: a workspace in the 0.20
         on_data = {n[0] for n in b['nodes'] if n[2] == 2}
         self.assertEqual(on_data, d._data_ids(EXAMPLE) & set(ids(b)))   # exactly the drawn data records on the Data plate
         self.assertFalse(list(new.glob('a1-business.json')))   # the workspace itself only read
+
+    def test_the_metamodel_view_is_sdems_knowledge_graphs(self):   # SDEM MID-01, MID-02: drawn from sdem model integrity --graph alone
+        import sdem_desnre as d
+        new = self.tmp / 'graph-check'
+        shutil.copytree(EXAMPLE_NOW, new, ignore=shutil.ignore_patterns('graph', 'migrations'))
+        g = json.loads(d.run_sdem(new, ['model', 'integrity', '--workspace', str(new), '--graph', '--json']).stdout)
+        m = d.model_for(new, 'pi-graph', need_mark=False)
+        self.assertEqual(m['source'].get('from'), 'sdem model integrity --graph')
+        self.assertEqual(sorted(n[0] for n in m['nodes']), sorted(x['id'] for x in g['records']))     # every record of every graph, nothing else
+        self.assertEqual(len(m['edges']), len(g['links']))                                          # every link inside and between the graphs
+        self.assertEqual([l['code'] for l in m['layers']], [x['code'] for x in g['graphs']])
 
     def test_a_design_without_bian_is_four_plates_with_data_second(self):   # SDEM's default: A1 Business, A2 Data, A3 Application, A4 Technology
         import sdem_desnre as d

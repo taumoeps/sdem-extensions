@@ -335,7 +335,8 @@ class Form020Tests(unittest.TestCase):   # SDEM's DL-23: a workspace in the 0.20
         mm = json.loads(d.run_sdem(new, ['model', 'integrity', '--workspace', str(new), '--metamodel', '--json']).stdout)
         v = d.build_integrity(new, 0.5, '--metamodel')   # the Metamodel viewpoint: the kinds of record and the links allowed, as SDEM gives them
         self.assertEqual(v['source']['from'], 'sdem model integrity --metamodel')
-        self.assertEqual(sorted(n[0] for n in v['nodes']), sorted(x['id'] for x in mm['records'])); self.assertEqual(len(v['edges']), len(mm['links']))
+        self.assertEqual(sorted(n[0] for n in v['nodes']), sorted(x['id'] for x in mm['records']))
+        self.assertEqual(len(v['edges']), sum(1 for x in mm['links'] if x['source'] != x['target']))   # a link to its own kind is said on the shape, not drawn
 
     def test_a_design_without_bian_is_four_plates_with_data_second(self):   # SDEM's default: A1 Business, A2 Data, A3 Application, A4 Technology
         import sdem_desnre as d

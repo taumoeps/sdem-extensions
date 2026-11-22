@@ -415,15 +415,16 @@ def build_integrity(ws, scale, what='--graph'):
         l = codes.index(x['graph']); fx, fz = plate(*x['at']); idx[x['id']] = len(nodes)
         nodes.append([x['id'], x['name'], l, round(fx, 3), round(fz, 3), SH.get(x['kind'], 'obj'), readable(x.get('type')), x['graph'] + ':' + x['group']])
     zones = [[[z['label'], *rect(z['rect']), x['code'] + ':' + z['label'].split(' · ')[0], None] for z in (g['zones'].get(x['code']) or [])] for x in g['graphs']]
-    edges = []
+    edges, own = [], {}
     for k in g['links']:
         a, b = idx.get(k['source']), idx.get(k['target'])
         if a is None or b is None: continue
+        if a == b: own.setdefault(a, []).append(k.get('relationship') or k.get('kind')); continue   # a kind linking to its own kind: said on the shape, not drawn as a line
         if k['scope'] == 'between' and nodes[a][2] > nodes[b][2]: a, b = b, a   # drawn from the upper graph down
         edges.append([a, b, 0 if k['status'] == 'proposed' else (1 if k['scope'] == 'between' else 2), k.get('relationship') or k.get('kind')])
     if g['format'] == 'sdem-integrity-metamodel/1':   # a kind's label says where it comes from and how many records the design has of it
         for x in g['records']:
-            n = nodes[idx[x['id']]]; n[6] = f"{x.get('archimate') or 'kind'} · {'core' if x['source'] == 'core' else 'extension ' + x['source']} · {x['records_in_design']} in the design"
+            n = nodes[idx[x['id']]]; n[6] = f"{x.get('archimate') or 'kind'} · {'core' if x['source'] == 'core' else 'extension ' + x['source']} · {x['records_in_design']} in the design" + (f" · links to its own kind by {', '.join(sorted(set(own[idx[x['id']]])))}" if idx[x['id']] in own else '')
     def look(x):
         L = stack.get(x['code']) or {}
         return GRAPH_LOOK.get(x['code']) or PLATE_LOOK.get(L.get('id'), (x['name'], '', '#9aa0a6'))

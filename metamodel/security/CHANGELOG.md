@@ -4,6 +4,10 @@ All made-up data. Rule ids: the [security aspect spec](docs/security-aspect-spec
 SDEM's [metamodel extensions](https://github.com/taumoeps/bian-sdem-framework/blob/main/docs/design/sdem-metamodel-extensions-spec.md) (MX-…) and
 [extension lifecycle](https://github.com/taumoeps/bian-sdem-framework/blob/main/docs/design/sdem-extension-lifecycle-spec.md) (EL-…) specs.
 
+## 0.4.1 — 2026-11-22
+
+- **Protection inherited from a protected whole is said** (SDEM MID-02): `sdem security coverage` gives `inherited_from` — the whole (an interface, a service domain, a zone) whose control covers a record with none of its own, climbing composition and aggregation. Said beside `protected`, never counted as a control of the record's own; a view shows it instead of working it out.
+
 ## 0.4.0 — 2026-11-22
 
 - **Every security layer is checked** (SX-12). Seven new rules, each a warning with its NIST control and CSF reference: a critical business process has a control (S1, SEC-S09); a service domain has a control (S2, SEC-S10 — computed, and only where BIAN is on); an application records the data it uses (S3, SEC-S11, CM-12) and personal data states its retention (SEC-S12, SI-12); an internet-facing interface has a control (S4, SEC-S13) and an application states its recovery time and point (SEC-S14, CP-9); system software states when its support ends (S5, SEC-S15, SA-22). On the Payment example they find the two applications that record no data they use.

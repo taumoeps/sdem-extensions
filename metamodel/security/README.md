@@ -15,7 +15,7 @@ Security in SDEM is four parts. This package is the first; the others are instal
 | Part | What it adds | How you get it |
 |---|---|---|
 | **sdem-security** (this package, 0.2.1) | layer S and its record and link types; the security standard (SEC-S01a…S06b) and its own checks (SEC-S07, SEC-S08, SEC-LAYER); the NIST SP 800-53 catalogue; the commands `catalogue`, `coverage`, `threats`, `review`, `document`, `propose`, `remove`, `restore`, `purge` | below |
-| **SDEM** 0.19.0 | metamodel extensions: a layer across the stack (LR-11), `ext:` packs, switching one off (`sdem profile exclude`, MX-16), exceptions to an extension's own checks (MX-17), the security layer's document (`sdem document --layer S`) | `pip install "git+https://github.com/taumoeps/bian-sdem-framework@v0.19.0"` |
+| **SDEM** 0.19.0 | metamodel extensions: a layer across the stack (LR-11), `ext:` packs, switching one off (`sdem profile exclude`, MX-16), exceptions to an extension's own checks (MX-17), the security layer's document (`sdem document --layer S`) | `pip install "git+https://github.com/taumoeps/sdem@v0.19.0"` |
 | **sdem-desnre** 0.8.0 (the DESNRE publisher) | publishes the design with its security layer and this extension's results — review, coverage, STRIDE checklist and the review document — with no local folder paths | `pip install "git+https://github.com/taumoeps/sdem-extensions#subdirectory=publishers/desnre"` |
 | **The DESNRE site and its AI agent** | the 3D *Security* view (S1–S5; controls and threats in red); the Security tab (tiles per S-layer, records, figures, Document Output with the layer document and the review); security in Health, Metamodel, Connections and Document Output; the agent's `security_review` tool, and a 9.7 *Security architecture* section (with threats in 5 and SDEM's findings in 10) in the design document it writes | live at desnre.vercel.app — nothing to install; it shows security for a design published with sdem-security and desnre 0.8.0 installed |
 
@@ -28,7 +28,7 @@ Choose one of two ways. Nothing is ever installed on the DESNRE site: it is host
 **1. The SDEM command line only**
 
 ```
-pip install "git+https://github.com/taumoeps/bian-sdem-framework@v0.19.0"                 # SDEM
+pip install "git+https://github.com/taumoeps/sdem@v0.19.0"                 # SDEM
 pip install "git+https://github.com/taumoeps/sdem-extensions#subdirectory=metamodel/security"      # this extension, into SDEM's environment
 ```
 
@@ -38,7 +38,7 @@ pages (`sdem workbench`, `sdem dashboard`) list the security records, but have n
 **2. The command line and DESNRE**
 
 ```
-pip install "git+https://github.com/taumoeps/bian-sdem-framework@v0.19.0"
+pip install "git+https://github.com/taumoeps/sdem@v0.19.0"
 pip install "git+https://github.com/taumoeps/sdem-extensions#subdirectory=metamodel/security"
 pip install "git+https://github.com/taumoeps/sdem-extensions#subdirectory=publishers/desnre"       # the publisher, 0.8.0 or later
 ```
@@ -87,7 +87,7 @@ labelled figure. A type another extension adds inside a layer (e.g. a firewall e
 
 ## The whole life — on this machine, in the workspace, on DESNRE
 
-Every step is a person's, and says what it does on each side ([extension lifecycle spec](https://github.com/taumoeps/bian-sdem-framework/blob/main/docs/design/sdem-extension-lifecycle-spec.md), EL-01…EL-17):
+Every step is a person's, and says what it does on each side ([extension lifecycle spec](https://github.com/taumoeps/sdem/blob/main/docs/design/sdem-extension-lifecycle-spec.md), EL-01…EL-17):
 
 | Step | In the workspace | On the DESNRE site |
 |---|---|---|
@@ -115,4 +115,4 @@ Removal is separate steps, each a person's, so nothing is lost by accident: swit
 **To remove everything**, in this order: `remove` → publish → `purge` → publish → `pip uninstall sdem-security` (and `pip uninstall
 sdem-desnre` if nothing else on this machine publishes). Do not delete `security.json` by hand: its connections would be left behind.
 
-The rules behind every step: the [extension lifecycle spec](https://github.com/taumoeps/bian-sdem-framework/blob/main/docs/design/sdem-extension-lifecycle-spec.md) (EL-01…EL-17).
+The rules behind every step: the [extension lifecycle spec](https://github.com/taumoeps/sdem/blob/main/docs/design/sdem-extension-lifecycle-spec.md) (EL-01…EL-17).

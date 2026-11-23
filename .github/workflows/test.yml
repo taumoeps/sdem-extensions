@@ -13,19 +13,19 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/checkout@v4
         with:
-          repository: taumoeps/bian-sdem-framework
-          path: bian-sdem-framework
+          repository: taumoeps/sdem
+          path: sdem
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
       - name: Install SDEM and the extensions
         run: |
-          pip install ./bian-sdem-framework
+          pip install ./sdem
           pip install ./publishers/desnre ./templates/publisher
           sdem extensions
       - name: Tests
         env:
-          SDEM_HOME: ${{ github.workspace }}/bian-sdem-framework
+          SDEM_HOME: ${{ github.workspace }}/sdem
         run: |
           python -m unittest discover -s publishers/desnre/tests -v
           python -m unittest discover -s templates/publisher/tests -v

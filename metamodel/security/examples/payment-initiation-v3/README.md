@@ -8,7 +8,7 @@ Synthetic data only — a fictional bank's payment initiation, the security desi
 - `security-links.json` — 36 links into A1–A4 (`PROTECTS`, `ENFORCED_BY`, `THREATENS`, `BOUNDS`), each approved by a person with evidence.
 
 ```
-cp -r <bian-sdem-framework>/examples/payment-initiation-v3/sdem /tmp/secws
+cp -r <sdem>/examples/payment-initiation-v3/sdem /tmp/secws
 sdem profile include ext:security --workspace /tmp/secws --person <you> --reason "security design"
 sdem profile adopt --workspace /tmp/secws --person <you> --reason "the security layer"
 sdem security propose security-design.json --workspace /tmp/secws --person <you>

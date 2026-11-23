@@ -25,7 +25,7 @@ jobs:
       - name: Install SDEM at ${{ matrix.sdem }}, then the security extension, in one clean environment
         run: |
           python -m pip install --upgrade pip
-          python -m pip install "git+https://github.com/taumoeps/bian-sdem-framework@${{ matrix.sdem }}"
+          python -m pip install "git+https://github.com/taumoeps/sdem@${{ matrix.sdem }}"
           python -m pip install ./metamodel/security
           sdem --version
           sdem extensions
@@ -59,7 +59,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/checkout@v4
         with:
-          repository: taumoeps/bian-sdem-framework
+          repository: taumoeps/sdem
           ref: main
           path: sdem-src
       - uses: actions/setup-python@v5

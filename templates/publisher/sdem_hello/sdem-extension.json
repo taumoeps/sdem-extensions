@@ -13,5 +13,5 @@
   "data": "any",
   "owner": "the sdem-extensions maintainers",
   "licence": "Apache-2.0",
-  "contract": "SDEM extension contract EXT-01…EXT-15 (taumoeps/bian-sdem-framework: docs/design/sdem-extensions-spec.md)"
+  "contract": "SDEM extension contract EXT-01…EXT-15 (taumoeps/sdem: docs/design/sdem-extensions-spec.md)"
 }

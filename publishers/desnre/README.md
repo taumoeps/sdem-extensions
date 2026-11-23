@@ -56,4 +56,4 @@ It follows SDEM's extension contract (EXT-01…EXT-15): its own program, `sdem-d
 python -m unittest discover -s desnre/tests
 ```
 
-They need SDEM next to this repository (`../bian-sdem-framework`) or `SDEM_HOME`. `tests/fake_site.py` stands in for the site's API (accounts, own pages, the hero page; a store in memory); the real API is tested in the DESNRE site.
+They need SDEM next to this repository (`../sdem`, or `../bian-sdem-framework` for an older checkout) or `SDEM_HOME`. `tests/fake_site.py` stands in for the site's API (accounts, own pages, the hero page; a store in memory); the real API is tested in the DESNRE site.

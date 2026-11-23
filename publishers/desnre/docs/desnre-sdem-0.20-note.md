@@ -5,7 +5,7 @@ layout and drawing are the DESNRE project's to decide.*
 
 ## What changes in SDEM 0.20
 
-- **Data is a layer of its own** (SDEM's [data-layer spec](https://github.com/taumoeps/bian-sdem-framework/blob/main/docs/design/sdem-data-layer-spec.md), DL-01).
+- **Data is a layer of its own** (SDEM's [data-layer spec](https://github.com/taumoeps/sdem/blob/main/docs/design/sdem-data-layer-spec.md), DL-01).
   With BIAN: A1 Business, A2 BIAN, **A3 Data**, A4 Application, A5 Technology. Without BIAN — SDEM's default: A1 Business, A2 Data,
   A3 Application, A4 Technology.
 - **A workspace in the 0.20 form** names its files by layer (`business.json`, `data.json`, `application.json` …) and its records'

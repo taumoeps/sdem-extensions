@@ -1,7 +1,7 @@
 {
   "name": "desnre",
   "command": "sdem-desnre",
-  "version": "0.11.9",
+  "version": "0.11.10",
   "description": "Publishes a made-up SDEM workspace to your own page of the DESNRE site, as a 3D view — a draft first, then live",
   "kind": [
     "publisher"
@@ -38,6 +38,6 @@
   "data": "synthetic only",
   "owner": "the sdem-extensions maintainers",
   "licence": "Apache-2.0",
-  "contract": "SDEM extension contract EXT-01…EXT-15 (taumoeps/bian-sdem-framework: docs/design/sdem-extensions-spec.md)",
+  "contract": "SDEM extension contract EXT-01…EXT-15 (taumoeps/sdem: docs/design/sdem-extensions-spec.md)",
   "home": "https://github.com/taumoeps/sdem-extensions/tree/main/publishers/desnre"
 }

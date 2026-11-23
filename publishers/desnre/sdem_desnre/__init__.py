@@ -402,7 +402,9 @@ def integrity_graph(ws):
         g = json.loads(r.stdout) if r.returncode == 0 else None
     except ValueError:
         return None
-    return no_local_paths(g, ws) if isinstance(g, dict) and g.get('format') == 'sdem-integrity-graph/1' else None
+    if not (isinstance(g, dict) and g.get('format') == 'sdem-integrity-graph/1'): return None
+    if isinstance(g.get('store'), dict): g['store'] = {k: v for k, v in g['store'].items() if k != 'at'}   # DP-04: the same workspace, the same file — the build's number and fingerprints, not its clock time
+    return no_local_paths(g, ws)
 
 
 def build_integrity(ws, scale, what='--graph'):

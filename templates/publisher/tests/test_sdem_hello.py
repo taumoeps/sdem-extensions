@@ -1,4 +1,4 @@
-"""The template extension, against SDEM's made-up payment example (EXT-14). Needs SDEM: ../bian-sdem-framework or SDEM_HOME."""
+"""The template extension, against SDEM's made-up payment example (EXT-14). Needs SDEM: ../sdem (or ../bian-sdem-framework) or SDEM_HOME."""
 import contextlib, io, json, os, sys, unittest
 from pathlib import Path
 
@@ -6,7 +6,7 @@ HERE = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(HERE))
 import sdem_hello as H   # noqa: E402
 
-SDEM = Path(os.environ.get('SDEM_HOME') or next((d / 'bian-sdem-framework' for d in HERE.parents if (d / 'bian-sdem-framework').is_dir()), HERE.parents[2] / 'bian-sdem-framework'))   # an SDEM checkout beside this repository, however deep the extension sits
+SDEM = Path(os.environ.get('SDEM_HOME') or next((d / n for d in HERE.parents for n in ('sdem', 'bian-sdem-framework') if (d / n / 'sdem' / 'cli.py').is_file()), HERE.parents[2] / 'bian-sdem-framework'))   # an SDEM checkout beside this repository, however deep the extension sits
 EXAMPLE = SDEM / 'examples' / 'payment-initiation'
 
 

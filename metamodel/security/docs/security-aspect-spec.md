@@ -1,7 +1,7 @@
 # The security aspect — `sdem-security` (spec)
 
 > **Status: approved (2026-11-18) — the owner approved SX-D1…SX-D6 as recommended, with S1–S5 and a Security 3D stack; being built.** The first metamodel extension
-> ([SDEM metamodel extensions spec](https://github.com/taumoeps/bian-sdem-framework/blob/main/docs/design/sdem-metamodel-extensions-spec.md), MX-01…MX-15).
+> ([SDEM metamodel extensions spec](https://github.com/taumoeps/sdem/blob/main/docs/design/sdem-metamodel-extensions-spec.md), MX-01…MX-15).
 > It adds a **security architecture** in five layers, **S1–S5**, each the security view of one Architecture plate (A1, A2, A3-1, A3-2, A4) —
 > without changing A1–A4; installed, it can be removed again (MX-03, MX-10). The owner's structure, 2026-11-18. Frameworks agreed with the owner, 2026-11-18 (§2). Made-up data only in its examples.
 
@@ -121,7 +121,7 @@ Not yet: the evidence in `control_evidence` is a reference only — nothing chec
 - **`review` never reports an all-clear it cannot vouch for:** it stops with a message when `sdem comply` fails, answers in an unknown
   form, or the SEC standard is not in the profile; it takes findings by the standard's id, not by a `SEC-` prefix.
 - **`sdem security remove`** switches it off (MX-16): the layer and its connections archived, their ids retired, the design still passing.
-- **0.2.0 — the whole life** ([extension lifecycle spec](https://github.com/taumoeps/bian-sdem-framework/blob/main/docs/design/sdem-extension-lifecycle-spec.md), EL-01…EL-17): `restore` (back from an archive, the same link ids) and `purge` (the archived data deleted, never the default); the manifest's `viewer` (what it offers DESNRE); with sdem-desnre 0.8.0 the design's state — on or off, since, by, why — is published, and the site says when security was switched off. The README's *Install* and *Remove* sections give the two ways to install and every removal step.
+- **0.2.0 — the whole life** ([extension lifecycle spec](https://github.com/taumoeps/sdem/blob/main/docs/design/sdem-extension-lifecycle-spec.md), EL-01…EL-17): `restore` (back from an archive, the same link ids) and `purge` (the archived data deleted, never the default); the manifest's `viewer` (what it offers DESNRE); with sdem-desnre 0.8.0 the design's state — on or off, since, by, why — is published, and the site says when security was switched off. The README's *Install* and *Remove* sections give the two ways to install and every removal step.
 
 **Every rule is a warning.** Switching security on in an existing design must not stop its work: with errors, `sdem check` (and so `sdem connect`, which refuses a change that leaves the check failing) would fail before the first control could be added. `sdem comply` and `sdem security review` report every finding; an organisation that wants them to block adds its own rules at `error` in its profile.
 
@@ -140,7 +140,7 @@ All read-only except `propose`; all take `--json`.
 ## 8. The viewpoint — Security Architecture, S1–S5
 
 - **Its own 3D stack, called *Security*** — a third viewpoint on the 3D view's switch, *Architecture · Security · Metamodel*, with the same controls as the other two (focus a plate, flat 2D, connections view): five plates stacked S1 at the top to S5 at the bottom. Present only while the aspect is installed and included in the workspace; removing it removes the option.
-- **Each S-plate is its A-plate with security drawn over it:** the same view model as the [Architecture viewpoint](https://github.com/taumoeps/bian-sdem-framework/blob/main/docs/design/sdem-architecture-viewpoint-spec.md) (same shapes, same positions), the shapes coloured by `access_classification`, each layer's controls and threats placed beside what they protect or threaten, trust boundaries drawn round what they bound; unprotected records marked.
+- **Each S-plate is its A-plate with security drawn over it:** the same view model as the [Architecture viewpoint](https://github.com/taumoeps/sdem/blob/main/docs/design/sdem-architecture-viewpoint-spec.md) (same shapes, same positions), the shapes coloured by `access_classification`, each layer's controls and threats placed beside what they protect or threaten, trust boundaries drawn round what they bound; unprotected records marked.
 - **Lines between plates** are the cross-layer **PROTECTS**, **ENFORCED_BY** and **THREATENS** — a control in S4 reaching down to S5 and up to S1. Choosing a control lights everything it protects and what enforces it, in every layer.
 - **2D, the Design document:** the same five figures (S1–S5, one view model for both, ARV-01/02) in a new section, *Security architecture*, with a coverage table per layer; written by the agent from this data and checked by SDEM.
 

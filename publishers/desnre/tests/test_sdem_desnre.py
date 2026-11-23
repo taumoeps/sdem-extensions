@@ -1,7 +1,7 @@
 """sdem desnre (the DESNRE site's docs/desnre-publish-design.md DP-01…DP-16; SDEM's EXT-01…EXT-15), against SDEM's made-up
 payment example and a stand-in for the site's API (fake_site.py: the same contract, a store in memory).
 
-Needs SDEM: a checkout next to this repository (../bian-sdem-framework), or SDEM_HOME.
+Needs SDEM: a checkout next to this repository (../sdem, or ../bian-sdem-framework), or SDEM_HOME.
     python -m unittest discover -s desnre/tests
 """
 import json, contextlib, io, os, shutil, subprocess, sys, tempfile, time, unittest
@@ -12,7 +12,7 @@ sys.path.insert(0, str(HERE)); sys.path.insert(0, str(HERE / 'tests'))
 import sdem_desnre as X   # noqa: E402
 from fake_site import Site   # noqa: E402
 
-SDEM = Path(os.environ.get('SDEM_HOME') or next((d / 'bian-sdem-framework' for d in HERE.parents if (d / 'bian-sdem-framework').is_dir()), HERE.parents[2] / 'bian-sdem-framework'))   # an SDEM checkout beside this repository, however deep the extension sits
+SDEM = Path(os.environ.get('SDEM_HOME') or next((d / n for d in HERE.parents for n in ('sdem', 'bian-sdem-framework') if (d / n / 'sdem' / 'cli.py').is_file()), HERE.parents[2] / 'bian-sdem-framework'))   # an SDEM checkout beside this repository, however deep the extension sits
 EXAMPLE = SDEM / 'examples' / 'payment-initiation'   # 0.19's form, as the site's four plates and pull know it
 EXAMPLE_NOW = SDEM / 'examples' / '0.20' / 'payment-initiation'   # SDEM 0.20: the same example migrated (DL-D9, opt-in)
 

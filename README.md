@@ -1,6 +1,6 @@
 # SDEM extensions
 
-Extensions for [SDEM](https://github.com/taumoeps/bian-sdem-framework), each its own package. Installed beside SDEM, an extension becomes part of the `sdem` command: `sdem <name> …`.
+Extensions for [SDEM](https://github.com/taumoeps/sdem), each its own package. Installed beside SDEM, an extension becomes part of the `sdem` command: `sdem <name> …`.
 
 | Extension | Does | Install |
 |---|---|---|
@@ -32,7 +32,7 @@ From a clone, `pip install -e sdem-extensions/publishers/desnre` — changes in 
 
 ## The rules every extension here follows
 
-SDEM's extension contract, EXT-01…EXT-15 ([`docs/design/sdem-extensions-spec.md`](https://github.com/taumoeps/bian-sdem-framework/blob/main/docs/design/sdem-extensions-spec.md)), in short:
+SDEM's extension contract, EXT-01…EXT-15 ([`docs/design/sdem-extensions-spec.md`](https://github.com/taumoeps/sdem/blob/main/docs/design/sdem-extensions-spec.md)), in short:
 
 - **Its own program, `sdem-<name>`,** with a manifest (`sdem-extension.json`) that it prints for `--manifest` — how SDEM recognises it.
 - **SDEM only through its commands** (`sdem … --json`) and the workspace files — never SDEM's code, so SDEM can change inside without breaking it. It names the SDEM versions it supports and stops outside them.

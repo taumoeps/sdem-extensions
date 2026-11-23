@@ -1,7 +1,7 @@
 {
   "name": "bian",
   "command": "sdem-bian",
-  "version": "1.0.3",
+  "version": "1.1.0",
   "description": "BIAN Service Domain Architecture — the A2 layer, its types, link types and inference rules, and the BIAN 14 catalogue (banking)",
   "kind": [
     "metamodel"
@@ -15,17 +15,17 @@
     "note": "horizontal: a layer of its own between A1 and A3, the reserved A2 (BX-04, BX-43)"
   },
   "uses": [
-    "sdem.api 0.1 (ST-20, ST-21) — its sdem bian commands run through SDEM's command line (sdem.api.run)"
+    "sdem.api 0.1 (ST-20, ST-21) — its sdem bian commands run through SDEM's command line (sdem.api.run); its inference runs SDEM's rules engine (CoreRun) with BIAN's own steps"
   ],
   "reads": [
-    "nothing itself — SDEM reads its data folder"
+    "the workspace SDEM names when it runs sdem-bian infer (MX-47) — its documented files, through sdem.api"
   ],
   "writes": "nothing",
   "sends_to": [],
   "data": "any",
   "owner": "the sdem-extensions maintainers",
   "licence": "Apache-2.0; the BIAN catalogue extract carries its own licence (data/catalogue/LICENSE)",
-  "contract": "SDEM extension contract EXT-01…EXT-15, metamodel extensions MX-01…MX-44, BIAN package BP-01…BP-11, stable identity ST-20…ST-22 (taumoeps/sdem)",
+  "contract": "SDEM extension contract EXT-01…EXT-15, metamodel extensions MX-01…MX-52, BIAN package BP-01…BP-11, stable identity ST-20…ST-22 (taumoeps/sdem)",
   "builds_on": {
     "types": [
       "A1.BusinessProcess",
@@ -41,5 +41,8 @@
   "commands": [
     "bian"
   ],
-  "api": ">=0.1,<0.2"
+  "api": ">=0.1,<0.2",
+  "infers": [
+    "link"
+  ]
 }

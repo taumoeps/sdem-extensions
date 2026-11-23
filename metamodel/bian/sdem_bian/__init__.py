@@ -4,6 +4,8 @@ It carries BIAN's data: the A2 metamodel, its within-layer rules, link types and
 them from its data folder when it is installed (and supports this SDEM); otherwise SDEM uses its built-in copy, identical for 0.20.
 
     sdem-bian --manifest     what it is, and where its data is (SDEM reads this)
+    sdem-bian infer --workspace DIR --step link --json
+                             BIAN's inference, for SDEM to check and list with its own (MX-45…MX-52) — SDEM runs it
     sdem-bian <command> …    the same as sdem bian <command> … — this package's own code (sdem_bian/bian.py), through sdem.api
                              (SDEM runs it for `sdem bian …` too, when this package supports its sdem.api)
 
@@ -30,6 +32,9 @@ def entry(argv=None):
         print(f"sdem-bian {MANIFEST['version']}"); return 0
     if argv[:1] in ([], ['-h'], ['--help']):
         print(__doc__.strip()); return 0
+    if argv[:1] == ['infer']:   # MX-47: SDEM asks for BIAN's inference (sdem link; sdem aid in step 3c)
+        from .infer import main as infer_main
+        return infer_main(argv[1:])
     from sdem import api   # ST-21: the one interface to SDEM's code
     from .bian import main   # its own `sdem bian` commands (ST-22), run the way SDEM runs its own
     return api.run('bian', main, argv)

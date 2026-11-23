@@ -19,6 +19,12 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+      - name: SDEM's repository at ${{ matrix.sdem }} — its examples and the 0.21 baseline the link proof compares with (0.22 step 3b)
+        uses: actions/checkout@v4
+        with:
+          repository: taumoeps/sdem
+          ref: ${{ matrix.sdem }}
+          path: sdem-src
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
@@ -43,4 +49,5 @@ jobs:
         env:
           SDEM_REQUIRED: '1'
           SDEM_RELEASED: ${{ matrix.sdem != 'main' && '1' || '' }}   # BP-11 against main only: a package newer than a released SDEM is not its copy
+          SDEM_HOME: ${{ github.workspace }}/sdem-src   # the link proof's examples and baseline (it skips where the baseline is not there — before SDEM 0.22)
         run: python -m unittest discover -s metamodel/bian/tests -v

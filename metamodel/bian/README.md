@@ -2,7 +2,7 @@
 
 A **horizontal metamodel extension**: the A2 Service Domain layer between Business (A1) and Application (A3), its 15 types, its
 within-layer rules, the link types and inference rules that reach it, and the BIAN 14 catalogue. Step 2 of SDEM 0.20
-([BIAN in its own package](https://github.com/taumoeps/bian-sdem-framework/blob/release/0.20/docs/design/sdem-bian-package-spec.md)).
+([BIAN in its own package](https://github.com/taumoeps/bian-sdem-framework/blob/main/docs/design/sdem-bian-package-spec.md)).
 
 ```
 pip install ./metamodel/bian          # into SDEM's environment

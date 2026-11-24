@@ -3,3 +3,4 @@ metamodel/bian/sdem_bian/data/** -text
 metamodel/bian/sdem_bian/bian.py -text
 metamodel/bian/sdem_bian/inferences.py -text
 metamodel/bian/sdem_bian/rules_bian.py -text
+metamodel/bian/sdem_bian/aid_bian.py -text

@@ -31,8 +31,8 @@ def entry(argv=None):
         print(json.dumps(manifest(), ensure_ascii=False)); return 0
     if argv[:1] in (['--version'], ['-V']):
         print(f"sdem-bian {MANIFEST['version']}"); return 0
-    if argv[:1] in ([], ['-h'], ['--help']):
-        print(__doc__.strip()); return 0
+    if not argv:
+        print(__doc__.strip()); return 0   # what the package is; its commands' own help is sdem-bian --help (as sdem bian --help)
     if argv[:1] == ['infer']:   # MX-47: SDEM asks for BIAN's inference (sdem link; sdem aid in step 3c)
         from .infer import main as infer_main
         return infer_main(argv[1:])

@@ -7,7 +7,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 SDEM = Path(os.environ.get('SDEM_HOME') or next((d / n for d in HERE.parents for n in ('sdem', 'bian-sdem-framework') if (d / n / 'sdem' / 'cli.py').is_file()), HERE.parents[3] / 'sdem'))
 BASE = SDEM / 'tests' / 'golden' / '0.21-link-scratch'
-PROV = ('mapping_id', 'created_by')
+PROV = ('created_by',)   # who made it; its number is 0.21's (MX-53: the whole run's order)
 BINS = [Path(sys.executable).parent, Path(sys.executable).parent / 'Scripts']   # Windows installs commands in Scripts\
 
 

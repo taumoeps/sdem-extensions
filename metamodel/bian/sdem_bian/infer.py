@@ -40,7 +40,10 @@ def link(workspace):
     return {'format': FORMAT,
             'proposals': [{'record': r} for r in out['proposals'] if mine(r)],
             'candidates': [r for r in out.get('candidates', []) if mine(r)],
-            'design': out.get('design') or []}
+            'design': out.get('design') or [],
+            # MX-53: the whole run's sequence (the core's rules with BIAN's), so SDEM numbers every proposal and candidate as the engine alone did
+            'order': [[r['source']['id'], r['relationship'], r['target']['id'], r['mapping_id']] for r in out['proposals']],
+            'candidate_order': [[r['source']['id'], r['relationship'], r['target']['id'], r['mapping_id']] for r in out.get('candidates', []) if r.get('mapping_id')]}
 
 
 def main(argv=None):

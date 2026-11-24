@@ -3,6 +3,8 @@
 ## 1.2.0 — 2026-11-24
 
 - **BIAN's part of `sdem aid` runs here** (SDEM 0.22 plan, step 3c; MX-54): `sdem-bian infer --step aid --phase <phase> --state FILE` answers each of the phases where `sdem aid` goes through BIAN — the projection (domains, BIAN's container pattern, the reverse steps), the domains a pattern names, the tables for BIAN's objects and who accesses them, and the links through BIAN's service domains, operations and objects. The code is `aid_bian.py`, generated from SDEM and held identical (BP-11). SDEM keeps everything between the phases its own and says in the run record who gave BIAN's part (`phases_by: bian 1.2.0`); what it infers is SDEM 0.21's, every record and link — proved on SDEM's 0.20 examples (`tests/test_infer_aid.py`).
+- `sdem link`'s numbers are SDEM 0.21's again: `infer --step link` also gives the whole run's order (`order`, `candidate_order`), and SDEM numbers every proposal and candidate in it (MX-53) — so `sdem link`, the dashboard and an approval name a proposal alike. The link proof now allows only `created_by` to differ.
+- `sdem-bian --help` shows its commands' help, as `sdem bian --help`; `sdem-bian` alone says what the package is.
 - The manifest says `"infers": ["link", "aid-phases"]`. Needs SDEM 0.22 or later for `sdem aid` to ask; an earlier SDEM keeps its own copy.
 
 ## 1.1.1 — 2026-11-24

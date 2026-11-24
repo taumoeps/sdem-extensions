@@ -32,7 +32,13 @@ class LinkAsBefore(unittest.TestCase):
             key = lambda p: (p['source']['id'], p['relationship'], p['target']['id'])
             strip = lambda p: {k: v for k, v in p.items() if k not in PROV}
             then = {key(p): strip(p) for p in json.loads(b.read_text(encoding='utf-8'))['proposals']}
-            self.assertEqual({key(p): strip(p) for p in now}, then, b.stem)
+            got = {key(p): strip(p) for p in now}
+            if got != then:   # say exactly what differs: the links, then each field
+                why = [f'only before: {k}' for k in sorted(set(then) - set(got))][:3] + [f'only now: {k}' for k in sorted(set(got) - set(then))][:3]
+                for k in sorted(set(got) & set(then)):
+                    for f in sorted(set(got[k]) | set(then[k])):
+                        if got[k].get(f) != then[k].get(f): why.append(f'{k} {f}: before {json.dumps(then[k].get(f))[:220]} — now {json.dumps(got[k].get(f))[:220]}')
+                self.fail(f'{b.stem}: ' + ' | '.join(why[:4]))
             made_by_bian += sum(1 for p in now if str(p.get('created_by', '')).startswith('bian '))
         self.assertGreater(made_by_bian, 100)   # BIAN's rules ran here, not in SDEM (160 on SDEM 0.21's examples)
 

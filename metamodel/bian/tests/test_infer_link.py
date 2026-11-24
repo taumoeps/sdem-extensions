@@ -24,14 +24,14 @@ class LinkAsBefore(unittest.TestCase):
             src = ex / 'sdem' if (ex / 'sdem' / 'mappings.json').exists() else ex
             t = Path(tempfile.mkdtemp()); self.addCleanup(shutil.rmtree, t, True)
             ws = t / 'ws'; shutil.copytree(src, ws)
-            m = json.loads((ws / 'mappings.json').read_text()); m['mappings'] = []; (ws / 'mappings.json').write_text(json.dumps(m))
+            m = json.loads((ws / 'mappings.json').read_text(encoding='utf-8')); m['mappings'] = []; (ws / 'mappings.json').write_text(json.dumps(m), encoding='utf-8')
             env = {**os.environ, 'PYTHONIOENCODING': 'utf-8', 'SDEM_FORM': '0.20', 'PATH': os.pathsep.join([*map(str, BINS), os.environ.get('PATH', '')])}
-            r = subprocess.run([sys.executable, '-m', 'sdem', 'link', '--workspace', str(ws), '--out', str(t / 'links'), '--no-review'], capture_output=True, text=True, env=env, cwd=t)
-            self.assertEqual(r.returncode, json.loads(b.read_text())['exit'], f'{b.stem}: {r.stderr[-400:]}')
-            now = json.loads((t / 'links' / 'proposals.json').read_text())['mappings']
+            r = subprocess.run([sys.executable, '-m', 'sdem', 'link', '--workspace', str(ws), '--out', str(t / 'links'), '--no-review'], capture_output=True, text=True, encoding='utf-8', errors='replace', env=env, cwd=t)
+            self.assertEqual(r.returncode, json.loads(b.read_text(encoding='utf-8'))['exit'], f'{b.stem}: {r.stderr[-400:]}')
+            now = json.loads((t / 'links' / 'proposals.json').read_text(encoding='utf-8'))['mappings']
             key = lambda p: (p['source']['id'], p['relationship'], p['target']['id'])
             strip = lambda p: {k: v for k, v in p.items() if k not in PROV}
-            then = {key(p): strip(p) for p in json.loads(b.read_text())['proposals']}
+            then = {key(p): strip(p) for p in json.loads(b.read_text(encoding='utf-8'))['proposals']}
             self.assertEqual({key(p): strip(p) for p in now}, then, b.stem)
             made_by_bian += sum(1 for p in now if str(p.get('created_by', '')).startswith('bian '))
         self.assertGreater(made_by_bian, 100)   # BIAN's rules ran here, not in SDEM (160 on SDEM 0.21's examples)

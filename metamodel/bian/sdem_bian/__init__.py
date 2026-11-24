@@ -5,6 +5,7 @@ them from its data folder when it is installed (and supports this SDEM); otherwi
 
     sdem-bian --manifest     what it is, and where its data is (SDEM reads this)
     sdem-bian infer --workspace DIR --step link --json
+    sdem-bian infer --workspace DIR --step aid --phase NAME --state FILE --json
                              BIAN's inference, for SDEM to check and list with its own (MX-45…MX-52) — SDEM runs it
     sdem-bian <command> …    the same as sdem bian <command> … — this package's own code (sdem_bian/bian.py), through sdem.api
                              (SDEM runs it for `sdem bian …` too, when this package supports its sdem.api)

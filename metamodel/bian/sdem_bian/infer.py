@@ -1,6 +1,11 @@
 """sdem-bian infer — BIAN's inference for SDEM (MX-45…MX-52; the SDEM 0.22 plan, step 3b).
 
     sdem-bian infer --workspace DIR --step link --json
+    sdem-bian infer --workspace DIR --step aid --phase NAME --state FILE --json
+
+The second is BIAN's part of `sdem aid` (MX-54; the plan's step 3c): SDEM calls it at each of its phases — projection, patterns,
+existing, information, access, direct — with the state so far in FILE, and reads back {"format", "phase", "result"}. The code is
+aid_bian.py, generated from SDEM's own copy (BP-11), so SDEM keeps everything between the phases (marking, zones, numbering) its own.
 
 SDEM runs this for `sdem link` on a workspace that uses BIAN (it never imports this package — R-D5). It runs SDEM's rules engine (its
 core rules, through sdem.api) with BIAN's own steps (rules_bian.py, the code SDEM split out of its engine), so BIAN's rules see the core's
@@ -42,10 +47,21 @@ def main(argv=None):
     ap = argparse.ArgumentParser(prog='sdem-bian infer', description=__doc__.strip().split('\n')[0])
     ap.add_argument('--workspace', required=True)
     ap.add_argument('--step', required=True, choices=['link', 'aid'])
+    ap.add_argument('--phase', help='MX-54: one phase of BIAN\'s part of sdem aid')
+    ap.add_argument('--state', help='MX-54: the file holding the state SDEM sends for the phase')
     ap.add_argument('--json', action='store_true')
     a = ap.parse_args(argv)
-    if a.step == 'aid':   # step 3c: AID's BIAN steps move here next; until then SDEM's own run (the manifest says "infers": ["link"])
-        print(json.dumps({'format': FORMAT})); return 0
+    if a.step == 'aid':
+        if not a.phase:   # MX-47's one answer at the end of sdem aid: BIAN gives its part at the phases instead ("aid-phases")
+            print(json.dumps({'format': FORMAT})); return 0
+        from sdem import api
+        from .aid_bian import answer
+        import contextlib
+        api.activate(a.workspace)
+        with open(a.state, encoding='utf-8') as f: state = json.load(f)
+        with (api.view_019() if api.parts.migrated() else contextlib.nullcontext()):   # DL-12: AID runs in a migrated workspace's 0.19 view, as SDEM's own run does
+            result = answer(a.phase, state, a.workspace)
+        print(json.dumps({'format': FORMAT, 'phase': a.phase, 'result': result})); return 0   # ASCII JSON
     print(json.dumps(link(a.workspace))); return 0   # ASCII JSON: the same bytes on every platform and console
 
 

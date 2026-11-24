@@ -27,6 +27,7 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install "git+https://github.com/taumoeps/sdem@${{ matrix.sdem }}"
           python -m pip install ./metamodel/security
+          python -m pip install ./metamodel/bian   # SDEM 0.22, R-D2: the example is a banking design (an older SDEM uses its built-in BIAN)
           sdem --version
           sdem extensions
       - name: Switch it on in a fresh workspace and run every command

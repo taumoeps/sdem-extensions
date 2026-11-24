@@ -22,6 +22,7 @@ jobs:
         run: |
           pip install ./sdem
           pip install ./publishers/desnre ./templates/publisher
+          pip install ./metamodel/bian   # SDEM 0.22, R-D2: the banking designs the publisher is tested on use BIAN
           sdem extensions
       - name: Tests
         env:

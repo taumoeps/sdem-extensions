@@ -46,7 +46,7 @@ def main(argv=None):
     a = ap.parse_args(argv)
     if a.step == 'aid':   # step 3c: AID's BIAN steps move here next; until then SDEM's own run (the manifest says "infers": ["link"])
         print(json.dumps({'format': FORMAT})); return 0
-    print(json.dumps(link(a.workspace), ensure_ascii=False)); return 0
+    print(json.dumps(link(a.workspace))); return 0   # ASCII JSON: the same bytes on every platform and console
 
 
 if __name__ == '__main__':

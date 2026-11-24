@@ -1,5 +1,9 @@
 # sdem-bian — changes
 
+## 1.1.1 — 2026-11-24
+
+- `sdem-bian infer` answers in ASCII JSON, the same bytes on every platform (on Windows a rationale's ↔ reached SDEM as â†”); its link proof now runs, and passes, on Windows too.
+
 ## 1.1.0 — 2026-11-24
 
 - **BIAN's link rules run here** (SDEM 0.22 plan, step 3b): `sdem-bian infer --step link` runs SDEM's rules engine through `sdem.api` with BIAN's own steps (`rules_bian.py`, generated from SDEM and held identical, BP-11) and answers SDEM with BIAN's proposals, candidates and target design whole (MX-45…MX-53). With it installed, `sdem link` runs only the core's rules itself; what it proposes is SDEM 0.21's, every field, except who made it (`created_by: bian 1.1.0`) and its number — proved on SDEM's 13 examples (`tests/test_infer_link.py`).

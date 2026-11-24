@@ -8,11 +8,11 @@ HERE = Path(__file__).resolve().parent
 SDEM = Path(os.environ.get('SDEM_HOME') or next((d / n for d in HERE.parents for n in ('sdem', 'bian-sdem-framework') if (d / n / 'sdem' / 'cli.py').is_file()), HERE.parents[3] / 'sdem'))
 BASE = SDEM / 'tests' / 'golden' / '0.21-link-scratch'
 PROV = ('mapping_id', 'created_by')
-BIN = Path(sys.executable).parent
+BINS = [Path(sys.executable).parent, Path(sys.executable).parent / 'Scripts']   # Windows installs commands in Scripts\
 
 
 def installed():
-    return shutil.which('sdem-bian', path=str(BIN)) is not None
+    return shutil.which('sdem-bian', path=os.pathsep.join(map(str, BINS))) is not None
 
 
 @unittest.skipUnless(BASE.is_dir() and installed() and not os.environ.get('SDEM_RELEASED'), 'needs an SDEM (0.22 onward) checkout with the 0.21 baseline, and sdem-bian installed beside it')
@@ -25,7 +25,7 @@ class LinkAsBefore(unittest.TestCase):
             t = Path(tempfile.mkdtemp()); self.addCleanup(shutil.rmtree, t, True)
             ws = t / 'ws'; shutil.copytree(src, ws)
             m = json.loads((ws / 'mappings.json').read_text()); m['mappings'] = []; (ws / 'mappings.json').write_text(json.dumps(m))
-            env = {**os.environ, 'PYTHONIOENCODING': 'utf-8', 'SDEM_FORM': '0.20', 'PATH': str(BIN) + os.pathsep + os.environ.get('PATH', '')}
+            env = {**os.environ, 'PYTHONIOENCODING': 'utf-8', 'SDEM_FORM': '0.20', 'PATH': os.pathsep.join([*map(str, BINS), os.environ.get('PATH', '')])}
             r = subprocess.run([sys.executable, '-m', 'sdem', 'link', '--workspace', str(ws), '--out', str(t / 'links'), '--no-review'], capture_output=True, text=True, env=env, cwd=t)
             self.assertEqual(r.returncode, json.loads(b.read_text())['exit'], f'{b.stem}: {r.stderr[-400:]}')
             now = json.loads((t / 'links' / 'proposals.json').read_text())['mappings']

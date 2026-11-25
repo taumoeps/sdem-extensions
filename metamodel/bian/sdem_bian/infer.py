@@ -5,7 +5,7 @@
 
 The second is BIAN's part of `sdem aid` (MX-54; the plan's step 3c): SDEM calls it at each of its phases — projection, patterns,
 existing, information, access, direct — with the state so far in FILE, and reads back {"format", "phase", "result"}. The code is
-aid_bian.py, generated from SDEM's own copy (BP-11), so SDEM keeps everything between the phases (marking, zones, numbering) its own.
+aid_bian.py — this package's own since SDEM 0.22 (BX-15), first written from SDEM's — so SDEM keeps everything between the phases (marking, zones, numbering) its own.
 
 SDEM runs this for `sdem link` on a workspace that uses BIAN (it never imports this package — R-D5). It runs SDEM's rules engine (its
 core rules, through sdem.api) with BIAN's own steps (rules_bian.py, the code SDEM split out of its engine), so BIAN's rules see the core's
@@ -23,7 +23,7 @@ def _rule_of(rec):
     return ev.split(':', 1)[1].split(' ', 1)[0] if ev.startswith('engine_rationale:') else None
 
 
-def link(workspace):
+def link(workspace, options=None):
     from sdem import api
     from .rules_bian import BianSteps
     api.activate(workspace)
@@ -34,7 +34,7 @@ def link(workspace):
         pass
 
     reader = api.GraphReader.from_exports(api.estate_files(workspace))   # the workspace read as `sdem link` reads it — every layer file
-    out = BianRun(reader, 'RUN').run()
+    out = BianRun(reader, 'RUN').run(options)   # the engine's options (an acceptance case's), as SDEM gives them
     design = lambda r: ' stepdesign ' in ((r.get('evidence') or [''])[0] + ' ')   # the target design's links (BIAN's container pattern), whatever rule names them
     mine = lambda r: design(r) or ((_rule_of(r) in own) if own is not None else True)
     return {'format': FORMAT,
@@ -43,6 +43,7 @@ def link(workspace):
             'design': out.get('design') or [],
             # MX-53: the whole run's sequence (the core's rules with BIAN's), so SDEM numbers every proposal and candidate as the engine alone did
             'order': [[r['source']['id'], r['relationship'], r['target']['id'], r['mapping_id']] for r in out['proposals']],
+            'log': out.get('log') or [],   # the whole run's inference log (every proposal named by the id SDEM gives it, in the order above)
             'candidate_order': [[r['source']['id'], r['relationship'], r['target']['id'], r['mapping_id']] for r in out.get('candidates', []) if r.get('mapping_id')]}
 
 
@@ -50,6 +51,7 @@ def main(argv=None):
     ap = argparse.ArgumentParser(prog='sdem-bian infer', description=__doc__.strip().split('\n')[0])
     ap.add_argument('--workspace', required=True)
     ap.add_argument('--step', required=True, choices=['link', 'aid'])
+    ap.add_argument('--options', help='MX-53: the rules engine\'s options, as JSON')
     ap.add_argument('--phase', help='MX-54: one phase of BIAN\'s part of sdem aid')
     ap.add_argument('--state', help='MX-54: the file holding the state SDEM sends for the phase')
     ap.add_argument('--json', action='store_true')
@@ -65,7 +67,7 @@ def main(argv=None):
         with (api.view_019() if api.parts.migrated() else contextlib.nullcontext()):   # DL-12: AID runs in a migrated workspace's 0.19 view, as SDEM's own run does
             result = answer(a.phase, state, a.workspace)
         print(json.dumps({'format': FORMAT, 'phase': a.phase, 'result': result})); return 0   # ASCII JSON
-    print(json.dumps(link(a.workspace))); return 0   # ASCII JSON: the same bytes on every platform and console
+    print(json.dumps(link(a.workspace, json.loads(a.options) if a.options else None))); return 0   # ASCII JSON: the same bytes on every platform and console
 
 
 if __name__ == '__main__':

@@ -1,0 +1,45 @@
+{
+  "note": "BIAN's part of SDEM's metamodel/export-conventions.json — moved here with SDEM 0.22 (BX-15)",
+  "conventions": {
+    "A2.ServiceOperation": {
+      "action_term": "one of BIAN's 17 action terms",
+      "behavior_qualifier": "qualifier name or null",
+      "input_attributes": "list of control-record attribute names consumed",
+      "output_attributes": "list produced"
+    },
+    "A2.ControlRecord": {
+      "attributes": "list of attribute names (BIAN control-record make-up)",
+      "lifecycle_states": "ordered list of the record's lifecycle states (S21 reasoning; informational)"
+    },
+    "A2.BusinessObject": {
+      "attributes": "list of BOM attribute names"
+    },
+    "A2.BusinessScenario": {
+      "operation_sequence": "ordered list of A2.ServiceOperation ids"
+    },
+    "A2.ServiceDomain": {
+      "asset_type": "id of the A2.AssetType the domain manages (join key for step 2 rule 1 reverse and S17 step-4 fallback)",
+      "functional_pattern": "id of the A2.FunctionalPattern"
+    },
+    "A2.AssetType": {
+      "aliases": "list of tokens the institution's workspace uses for this asset (join key for the step-2 boundary gate and the S17 fallback); e.g. Financial Position → balance, position, posting, ledger"
+    },
+    "A2.BehaviorQualifier": {
+      "aliases": "list of tokens the institution's APIs use for this qualifier (step-2 check 3); e.g. Closure → close"
+    }
+  },
+  "key_ids": {
+    "A2.ServiceOperation.action_term": "KA2-01",
+    "A2.ServiceOperation.behavior_qualifier": "KA2-02",
+    "A2.ServiceOperation.input_attributes": "KA2-03",
+    "A2.ServiceOperation.output_attributes": "KA2-04",
+    "A2.ControlRecord.attributes": "KA2-05",
+    "A2.ControlRecord.lifecycle_states": "KA2-06",
+    "A2.BusinessObject.attributes": "KA2-07",
+    "A2.BusinessScenario.operation_sequence": "KA2-08",
+    "A2.ServiceDomain.asset_type": "KA2-09",
+    "A2.ServiceDomain.functional_pattern": "KA2-10",
+    "A2.AssetType.aliases": "KA2-11",
+    "A2.BehaviorQualifier.aliases": "KA2-12"
+  }
+}

@@ -1,0 +1,239 @@
+{
+ "format": "sdem-order/1",
+ "note": "MX-55: where each of BIAN's rows sits among the core's — for each row of the file of that kind, in its order, the key of the core row it follows (null: first)",
+ "within": [
+  null,
+  null,
+  null,
+  null,
+  null,
+  null,
+  null,
+  null,
+  null,
+  null,
+  null,
+  null,
+  null,
+  null,
+  null,
+  null,
+  null,
+  {
+   "id": "RA1-49"
+  },
+  {
+   "id": "RA1-49"
+  },
+  {
+   "id": "RA1-49"
+  },
+  {
+   "id": "RA1-49"
+  },
+  {
+   "id": "RA1-49"
+  },
+  {
+   "id": "RA1-49"
+  }
+ ],
+ "link_types": [
+  null,
+  null,
+  null,
+  null,
+  null,
+  null,
+  null,
+  {
+   "source_type": "A3.ApplicationComponent",
+   "relationship": "BUILT_AS",
+   "target_type": "A4.Artifact"
+  },
+  {
+   "source_type": "A1.BusinessObject",
+   "relationship": "MAPPED_TO",
+   "target_type": "A3.DataEntity"
+  },
+  {
+   "source_type": "A1.BusinessInterface",
+   "relationship": "REALIZED_BY",
+   "target_type": "A3.ApplicationInterface"
+  }
+ ],
+ "rules": [
+  null,
+  null,
+  null,
+  null,
+  null,
+  null,
+  null,
+  null,
+  null,
+  null,
+  null,
+  null,
+  null,
+  null,
+  null,
+  null,
+  null,
+  null,
+  null,
+  null,
+  null,
+  null,
+  null,
+  null,
+  null,
+  null,
+  null,
+  null,
+  null,
+  null,
+  null,
+  null,
+  null,
+  null,
+  null,
+  null,
+  null,
+  null,
+  null,
+  null,
+  null,
+  null,
+  null,
+  null,
+  null,
+  null
+ ],
+ "attributes": [
+  {
+   "entity": "A1.BusinessRequirement",
+   "name": "applies_to"
+  },
+  {
+   "entity": "A1.BusinessRequirement",
+   "name": "applies_to"
+  },
+  {
+   "entity": "A1.BusinessRequirement",
+   "name": "applies_to"
+  },
+  {
+   "entity": "A1.BusinessRequirement",
+   "name": "applies_to"
+  },
+  {
+   "entity": "A1.BusinessRequirement",
+   "name": "applies_to"
+  },
+  {
+   "entity": "A1.BusinessRequirement",
+   "name": "applies_to"
+  },
+  {
+   "entity": "A1.BusinessRequirement",
+   "name": "applies_to"
+  },
+  {
+   "entity": "A1.BusinessRequirement",
+   "name": "applies_to"
+  },
+  {
+   "entity": "A1.BusinessRequirement",
+   "name": "applies_to"
+  },
+  {
+   "entity": "A1.BusinessRequirement",
+   "name": "applies_to"
+  },
+  {
+   "entity": "A1.BusinessRequirement",
+   "name": "applies_to"
+  },
+  {
+   "entity": "A1.BusinessRequirement",
+   "name": "applies_to"
+  },
+  {
+   "entity": "A1.BusinessRequirement",
+   "name": "priority"
+  },
+  {
+   "entity": "A1.BusinessRequirement",
+   "name": "priority"
+  },
+  {
+   "entity": "A1.BusinessRequirement",
+   "name": "priority"
+  },
+  {
+   "entity": "A1.BusinessRequirement",
+   "name": "priority"
+  },
+  {
+   "entity": "A1.BusinessRequirement",
+   "name": "priority"
+  },
+  {
+   "entity": "A1.BusinessRequirement",
+   "name": "priority"
+  },
+  {
+   "entity": "A1.BusinessRequirement",
+   "name": "priority"
+  },
+  {
+   "entity": "A1.BusinessRequirement",
+   "name": "priority"
+  },
+  {
+   "entity": "A1.BusinessRequirement",
+   "name": "priority"
+  },
+  {
+   "entity": "A1.BusinessRequirement",
+   "name": "priority"
+  },
+  {
+   "entity": "A1.BusinessRequirement",
+   "name": "priority"
+  },
+  {
+   "entity": "A1.BusinessRequirement",
+   "name": "priority"
+  },
+  {
+   "entity": "A1.BusinessRequirement",
+   "name": "priority"
+  },
+  {
+   "entity": "A1.BusinessRequirement",
+   "name": "priority"
+  },
+  {
+   "entity": "A1.BusinessRequirement",
+   "name": "priority"
+  },
+  {
+   "entity": "A4.InfrastructureComponent",
+   "name": "region"
+  },
+  {
+   "entity": "A4.InfrastructureComponent",
+   "name": "region"
+  },
+  {
+   "entity": "A4.InfrastructureComponent",
+   "name": "region"
+  },
+  {
+   "entity": "A4.InfrastructureComponent",
+   "name": "region"
+  }
+ ]
+}

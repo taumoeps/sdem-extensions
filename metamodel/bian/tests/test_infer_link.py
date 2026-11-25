@@ -20,6 +20,7 @@ class LinkAsBefore(unittest.TestCase):
     def test_every_example_proposes_what_sdem_0_21_proposed(self):
         made_by_bian = 0
         for b in sorted(BASE.glob('*.json')):
+            if b.stem == 'reference-structure': continue   # SDEM 0.22 (BX-15): generated from SDEM's core — no BIAN layer now
             ex = SDEM / 'examples' / '0.20' / b.stem
             src = ex / 'sdem' if (ex / 'sdem' / 'mappings.json').exists() else ex
             t = Path(tempfile.mkdtemp()); self.addCleanup(shutil.rmtree, t, True)

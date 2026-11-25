@@ -12,6 +12,16 @@ SCRIPT = SDEM / 'scripts' / 'golden' / 'aid_scratch.py'
 BINS = [Path(sys.executable).parent, Path(sys.executable).parent / 'Scripts']   # Windows installs commands in Scripts\
 
 
+MOVED = ('reference-structure__',)   # SDEM 0.22 (BX-15): the reference structure is generated from SDEM's core — it has no BIAN layer now
+
+
+def _norm(x):
+    """What moved with SDEM 0.22 and nothing else: SDEM's own version stamp (sdem.version) and the metamodel's (0.19.0 → 0.20.0, R-D3)."""
+    if isinstance(x, dict): return {k: ('<metamodel>' if k == 'metamodel_version' else _norm(v)) for k, v in x.items() if k != 'sdem'}
+    if isinstance(x, list): return [_norm(v) for v in x]
+    return x
+
+
 def installed():
     return shutil.which('sdem-bian', path=os.pathsep.join(map(str, BINS))) is not None
 
@@ -25,9 +35,11 @@ class AidAsBefore(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stderr[-800:])
         by = set()
         for b in sorted(BASE.glob('*.json.gz')):
-            then = json.loads(gzip.open(b, 'rt', encoding='utf-8').read())
+            if b.name.startswith(MOVED): continue
+            then = _norm(json.loads(gzip.open(b, 'rt', encoding='utf-8').read()))
             now = json.loads((out / b.name[:-3]).read_text(encoding='utf-8'))
             by.add(((now.get('record') or {}).pop('phases_by', None)))
+            now = _norm(now)
             if now != then:   # say where it differs first
                 why = [k for k in sorted(set(now) | set(then)) if now.get(k) != then.get(k)]
                 self.fail(f'{b.name[:-8]}: differs in {why}: {json.dumps(now.get("stderr_tail"))[:300]}')

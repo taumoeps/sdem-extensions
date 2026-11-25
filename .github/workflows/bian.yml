@@ -1,7 +1,7 @@
 name: BIAN extension against SDEM
 
 # sdem-bian's tests, run against SDEM installed from its 0.20 branch (the first SDEM that reads an installed sdem-bian, BP-05) —
-# never skipped (SDEM_REQUIRED=1). Its data must equal SDEM's built-in copy while that fallback exists (BP-11).
+# never skipped (SDEM_REQUIRED=1). Since SDEM 0.22 it is BIAN's only source (BX-15): SDEM ships no copy to compare with.
 on:
   push:
     paths: ['metamodel/bian/**', '.github/workflows/bian.yml', '.gitattributes']

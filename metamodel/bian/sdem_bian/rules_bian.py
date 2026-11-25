@@ -389,7 +389,8 @@ class BianSteps:
                 explained = set()
                 for dd, cc, _ in self.links_by('REALIZED_BY', tgts=lineage):
                     if cc in lineage and dd != dom['id']:
-                        a2 = self.get(self.attr(self.get(dd, _T('bian.ServiceDomain')), 'asset_type'), _T('bian.AssetType'))
+                        sd = self.get(dd, _T('bian.ServiceDomain'))   # a REALIZED_BY from something else (an A1 business service, AID-L03) explains nothing here
+                        a2 = self.get(self.attr(sd, 'asset_type'), _T('bian.AssetType')) if sd else None
                         if a2: explained |= stems(tokens(a2['name'], *_list(self.attr(a2, 'aliases'))))
                 texts = []
                 for x in self.descendants(comp['id']):

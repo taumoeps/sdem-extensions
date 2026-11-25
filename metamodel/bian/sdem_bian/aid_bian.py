@@ -10,7 +10,7 @@ import copy, datetime, hashlib, json, re  # noqa: F401
 from sdem.api import T as _T, layer as _L, live as _live  # ST-01…ST-05: layers and types by id
 from sdem.api import LevelGraph
 from sdem.api import Metamodel
-from sdem.api import CoreRun, RulesEngine, WEAK_CLASSES, _list, _rules, stems, strongest, tokens, weakest  # the engine and its helpers
+from sdem.api import CoreRun, WEAK_CLASSES, _list, _rules, stems, strongest, tokens, weakest  # the engine and its helpers
 from .rules_bian import BianSteps
 from sdem.api import CATALOGUE_RULE, FILES, LOW, MEDIUM, _reader, conf_of, is_weak  # AID's projection package: its files, confidence, evidence
 
@@ -80,6 +80,8 @@ def _answer(phase, state, workspace):
     maps = [tuple(m) if isinstance(m, list) else m for m in state.get('maps') or []]
     rejected = set(state.get('rejected') or [])
     if phase == 'projection':
+        if 'catalogue' in state:   # sdem aid project: the catalogue it names (or none), and what both sides support
+            return {'package': project(state['have'], state['catalogue'], state['registry'], either=state.get('either', False))}
         pkg, _ = projection(workspace, state['have'], state['registry'])
         return {'package': pkg}
     if phase == 'patterns':
@@ -216,7 +218,7 @@ class Projection:
         return {'projection': meta, 'layers': layers, 'links': {'links': list(self.links.values())}}
 
 def _engine(levels, mm, registry=None):
-    reader = _reader(levels, mm, registry); res = RulesEngine().infer(reader, {'id': 'AID'})
+    reader = _reader(levels, mm, registry); res = Run(reader, 'AID').run(None)   # the core's rules with BIAN's (SDEM's engine is the core's alone since 0.22)
     return res['proposals'], res['candidates'], reader
 
 def forward_a2(prj, a1, registry):

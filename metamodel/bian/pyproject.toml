@@ -17,4 +17,4 @@ sdem-bian = "sdem_bian:entry"
 packages = ["sdem_bian"]
 
 [tool.setuptools.package-data]
-sdem_bian = ["*.json", "data/*.json", "data/catalogue/*"]
+sdem_bian = ["*.json", "data/*.json", "data/catalogue/*", "data/standards/*.json"]

@@ -1,5 +1,5 @@
-"""sdem-bian against the SDEM it is installed with (BP-01…BP-11): SDEM finds it and reads its data; its data is identical to SDEM's
-built-in copy while that fallback exists (BP-11); SDEM's answers are the same with it as without it. Needs SDEM in the same
+"""sdem-bian against the SDEM it is installed with (BP-01…BP-11): SDEM finds it and reads its data — since SDEM 0.22 its
+only source of BIAN (BX-15); SDEM's answers are the same with it as without it. Needs SDEM in the same
 environment — skipped without it unless SDEM_REQUIRED=1 (CI)."""
 import json, os, shutil, subprocess, sys, tempfile, unittest
 from pathlib import Path
@@ -38,16 +38,15 @@ class Manifest(unittest.TestCase):
 
 @unittest.skipUnless(HAVE or NEED, 'SDEM is not installed in this environment')
 class WithSdem(unittest.TestCase):
-    @unittest.skipIf(os.environ.get('SDEM_RELEASED'), 'BP-11 holds against the SDEM the package is written from (its branch), not a release before it')
-    def test_the_data_is_sdems_builtin_copy(self):   # BP-11: no drift while the fallback exists
-        from sdem.parts import write_package_data
-        out = Path(tempfile.mkdtemp())
-        try:
-            files = write_package_data(out)
-            differ = [f for f in files if (out / f).read_bytes() != (sdem_bian.HERE / f).read_bytes()]
-            self.assertEqual(differ, [], 'the package and SDEM disagree — regenerate with scripts/bian_package.py, or change both')
-        finally:
-            shutil.rmtree(out, ignore_errors=True)
+    def test_it_is_bians_only_source(self):   # SDEM 0.22 (BX-15): SDEM ships no BIAN — every row it uses comes from here, in its place (MX-55)
+        from sdem import parts
+        if hasattr(parts, 'write_package_data'): self.skipTest('an SDEM before 0.22 still has its own copy of BIAN')
+        data = sdem_bian.HERE / 'data'
+        order = json.loads((data / 'order.json').read_text(encoding='utf-8'))
+        for kind, f in (('within', 'within-layer-rules.json'), ('link_types', 'link-types.json'), ('rules', 'inference-rules.json'), ('attributes', 'attributes.json')):
+            self.assertEqual(len(order[kind]), len(json.loads((data / f).read_text(encoding='utf-8'))), f'{kind}: one place for each of its rows')
+        self.assertTrue(list((data / 'catalogue').glob('layer-*.json')), 'the base BIAN layer, built (new.base_layer reads it)')
+        self.assertTrue(list((data / 'standards').glob('sdem-pattern-bian-*.json')), "BIAN's patterns")
 
     def test_sdem_finds_it_and_reads_its_data(self):   # BP-05
         from sdem import parts

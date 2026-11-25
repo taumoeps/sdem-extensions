@@ -22,6 +22,11 @@ def _norm(x):
     return x
 
 
+def _uses_bian(example):
+    ex = SDEM / 'examples' / '0.20' / example
+    return any((d / 'bian.json').is_file() for d in (ex, ex / 'sdem'))
+
+
 def installed():
     return shutil.which('sdem-bian', path=os.pathsep.join(map(str, BINS))) is not None
 
@@ -35,7 +40,7 @@ class AidAsBefore(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stderr[-800:])
         by = set()
         for b in sorted(BASE.glob('*.json.gz')):
-            if b.name.startswith(MOVED): continue
+            if b.name.startswith(MOVED) or not _uses_bian(b.name.split('__')[0]): continue   # SDEM 0.22: a design without BIAN is a core one — not BIAN's to prove
             then = _norm(json.loads(gzip.open(b, 'rt', encoding='utf-8').read()))
             now = json.loads((out / b.name[:-3]).read_text(encoding='utf-8'))
             by.add(((now.get('record') or {}).pop('phases_by', None)))

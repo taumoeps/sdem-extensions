@@ -4,3 +4,6 @@ metamodel/bian/sdem_bian/bian.py -text
 metamodel/bian/sdem_bian/inferences.py -text
 metamodel/bian/sdem_bian/rules_bian.py -text
 metamodel/bian/sdem_bian/aid_bian.py -text
+
+# sdem-bian examples: the same bytes on every platform, as in SDEM (AF-10) — their checksums and answers are compared
+metamodel/bian/sdem_bian/examples/** text eol=lf

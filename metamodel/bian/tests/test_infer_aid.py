@@ -7,6 +7,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 SDEM = Path(os.environ.get('SDEM_HOME') or next((d / n for d in HERE.parents for n in ('sdem', 'bian-sdem-framework') if (d / n / 'sdem' / 'cli.py').is_file()), HERE.parents[3] / 'sdem'))
+OWN = HERE.parent / 'sdem_bian' / 'examples'   # SDEM 0.22 (R-D6): the banking examples are sdem-bian's own
 BASE = SDEM / 'tests' / 'golden' / '0.21-aid-scratch'
 SCRIPT = SDEM / 'scripts' / 'golden' / 'aid_scratch.py'
 BINS = [Path(sys.executable).parent, Path(sys.executable).parent / 'Scripts']   # Windows installs commands in Scripts\
@@ -23,7 +24,7 @@ def _norm(x):
 
 
 def _uses_bian(example):
-    ex = SDEM / 'examples' / '0.20' / example
+    ex = (OWN / '0.20' / example if (OWN / '0.20' / example).is_dir() else SDEM / 'examples' / '0.20' / example)
     return any((d / 'bian.json').is_file() for d in (ex, ex / 'sdem'))
 
 

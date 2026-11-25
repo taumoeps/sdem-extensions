@@ -6,6 +6,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 SDEM = Path(os.environ.get('SDEM_HOME') or next((d / n for d in HERE.parents for n in ('sdem', 'bian-sdem-framework') if (d / n / 'sdem' / 'cli.py').is_file()), HERE.parents[3] / 'sdem'))
+OWN = HERE.parent / 'sdem_bian' / 'examples'   # SDEM 0.22 (R-D6): the banking examples are sdem-bian's own
 BASE = SDEM / 'tests' / 'golden' / '0.21-link-scratch'
 PROV = ('created_by',)   # who made it; its number is 0.21's (MX-53: the whole run's order)
 BINS = [Path(sys.executable).parent, Path(sys.executable).parent / 'Scripts']   # Windows installs commands in Scripts\
@@ -20,7 +21,7 @@ class LinkAsBefore(unittest.TestCase):
     def test_every_example_proposes_what_sdem_0_21_proposed(self):
         made_by_bian = 0
         for b in sorted(BASE.glob('*.json')):
-            ex = SDEM / 'examples' / '0.20' / b.stem
+            ex = (OWN / '0.20' / b.stem if (OWN / '0.20' / b.stem).is_dir() else SDEM / 'examples' / '0.20' / b.stem)
             if b.stem == 'reference-structure' or not any((d / 'bian.json').is_file() for d in (ex, ex / 'sdem')): continue   # SDEM 0.22 (BX-15): a design without BIAN is a core one — not BIAN's to prove
             src = ex / 'sdem' if (ex / 'sdem' / 'mappings.json').exists() else ex
             t = Path(tempfile.mkdtemp()); self.addCleanup(shutil.rmtree, t, True)

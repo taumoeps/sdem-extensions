@@ -1,5 +1,10 @@
 # sdem-bian — changes
 
+## 1.3.0 — 2026-11-26
+
+- **The banking examples are here** (SDEM 0.22, R-D6): the made-up designs SDEM shipped — Payment initiation in its versions, digital lending, card fraud alerts, FX dealing, trade finance, customer onboarding, an acquired fintech and a legacy core ledger, in SDEM 0.19's form and 0.20's — with the acceptance and blind cases, in `sdem_bian/examples`. The manifest names the folder (`examples`); with this package installed, `sdem new --example payment-initiation` starts from one, as before.
+- The link and AID proofs read these copies.
+
 ## 1.2.0 — 2026-11-24
 
 - **BIAN's part of `sdem aid` runs here** (SDEM 0.22 plan, step 3c; MX-54): `sdem-bian infer --step aid --phase <phase> --state FILE` answers each of the phases where `sdem aid` goes through BIAN — the projection (domains, BIAN's container pattern, the reverse steps), the domains a pattern names, the tables for BIAN's objects and who accesses them, and the links through BIAN's service domains, operations and objects. The code is `aid_bian.py`, generated from SDEM and held identical (BP-11). SDEM keeps everything between the phases its own and says in the run record who gave BIAN's part (`phases_by: bian 1.2.0`); what it infers is SDEM 0.21's, every record and link — proved on SDEM's 0.20 examples (`tests/test_infer_aid.py`).

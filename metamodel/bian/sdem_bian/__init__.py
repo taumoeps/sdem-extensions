@@ -22,7 +22,8 @@ MANIFEST = json.loads((HERE / 'sdem-extension.json').read_text(encoding='utf-8')
 
 def manifest():
     """The manifest, with where this installation keeps BIAN's data (BP-02)."""
-    return {**MANIFEST, 'bian_data': str(DATA.resolve()), 'pack': str((HERE / 'pack.json').resolve())}   # the pack: what `sdem profile include ext:bian` folds in
+    return {**MANIFEST, 'bian_data': str(DATA.resolve()), 'pack': str((HERE / 'pack.json').resolve()),
+            'examples': str((HERE / 'examples').resolve())}   # its synthetic banking designs (SDEM 0.22, R-D6): sdem new --example lists them   # the pack: what `sdem profile include ext:bian` folds in
 
 
 def entry(argv=None):

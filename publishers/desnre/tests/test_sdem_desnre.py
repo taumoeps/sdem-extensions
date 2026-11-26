@@ -13,8 +13,19 @@ import sdem_desnre as X   # noqa: E402
 from fake_site import Site   # noqa: E402
 
 SDEM = Path(os.environ.get('SDEM_HOME') or next((d / n for d in HERE.parents for n in ('sdem', 'bian-sdem-framework') if (d / n / 'sdem' / 'cli.py').is_file()), HERE.parents[2] / 'bian-sdem-framework'))   # an SDEM checkout beside this repository, however deep the extension sits
-EXAMPLE = SDEM / 'examples' / 'payment-initiation'   # 0.19's form, as the site's four plates and pull know it
-EXAMPLE_NOW = SDEM / 'examples' / '0.20' / 'payment-initiation'   # SDEM 0.20: the same example migrated (DL-D9, opt-in)
+
+
+def _ex(rel):
+    """An example: sdem-bian's (SDEM 0.22, R-D6 — the banking designs moved there), else an SDEM checkout's (before 0.22)."""
+    try:
+        import sdem_bian
+        p = Path(sdem_bian.manifest().get('examples') or '') / rel
+        if p.exists(): return p
+    except Exception: pass
+    return SDEM / 'examples' / rel
+
+EXAMPLE = _ex('payment-initiation')   # 0.19's form, as the site's four plates and pull know it
+EXAMPLE_NOW = _ex('0.20/payment-initiation')   # SDEM 0.20: the same example migrated (DL-D9, opt-in)
 
 
 def run(*argv):
@@ -242,7 +253,7 @@ class ExtensionTests(unittest.TestCase):
         self.assertFalse(X.in_range('0.17.0', X.MANIFEST['sdem'])); self.assertFalse(X.in_range('1.0.0', X.MANIFEST['sdem']))
 
     def test_a_full_design_builds_without_its_fields_and_locations(self):   # SDEM 0.19: fields and locations are in the workspace, not drawn
-        v2 = SDEM / 'examples' / 'payment-initiation-v2'
+        v2 = _ex('payment-initiation-v2')
         if not v2.exists(): self.skipTest('needs SDEM 0.19 (examples/payment-initiation-v2)')
         body = X.build(str(v2), 0.5)
         ids = {n[0] for n in body['nodes']}
@@ -251,21 +262,21 @@ class ExtensionTests(unittest.TestCase):
 
 
 
-@unittest.skipUnless((SDEM / 'examples' / 'payment-initiation-v2').exists(), 'needs SDEM 0.19 or later')
+@unittest.skipUnless((_ex('payment-initiation-v2')).exists(), 'needs SDEM 0.19 or later')
 class PathTests(unittest.TestCase):   # PL-01: a path is the line between the nodes it connects, not a shape (the owner, 2026-11-16)
     def test_a_path_is_sent_as_a_labelled_line(self):
         sys.path.insert(0, str(SDEM))
-        m = X.build(str(SDEM / 'examples' / 'payment-initiation-v2'), 0.5); N = m['nodes']
+        m = X.build(str(_ex('payment-initiation-v2')), 0.5); N = m['nodes']
         self.assertNotIn('PATH-PAY-CORE-HSM', [n[0] for n in N])
         self.assertIn(('INF-CORE-LEDGER-HOST', 'DEV-PAY-HSM', 'path · Core ledger host to HSM · tls'), [(N[e[0]][0], N[e[1]][0], e[3]) for e in m['edges']])
 
 
-@unittest.skipUnless((SDEM / 'examples' / 'payment-initiation-v2').exists(), 'needs SDEM 0.19 or later')
+@unittest.skipUnless((_ex('payment-initiation-v2')).exists(), 'needs SDEM 0.19 or later')
 class DraftTests(unittest.TestCase):   # desnre 0.7.4: the draft is drawn — links SDEM proposed and nobody has decided, dashed (the owner, 2026-11-17)
     def test_a_link_proposed_and_not_yet_decided_is_drawn_dashed(self):
         import shutil, tempfile
         tmp = Path(tempfile.mkdtemp()); self.addCleanup(shutil.rmtree, tmp, True)
-        ws = tmp / 'ws'; shutil.copytree(SDEM / 'examples' / 'payment-initiation-v2', ws, ignore=shutil.ignore_patterns('graph'))
+        ws = tmp / 'ws'; shutil.copytree(_ex('payment-initiation-v2'), ws, ignore=shutil.ignore_patterns('graph'))
         reg = json.loads((ws / 'mappings.json').read_text(encoding='utf-8'))['mappings']
         done = next(m for m in reg if m['status'] == 'approved')
         before = X.build(str(ws), 0.5); N = [n[0] for n in before['nodes']]
@@ -341,7 +352,7 @@ class Form020Tests(unittest.TestCase):   # SDEM's DL-23: a workspace in the 0.20
     def test_a_design_without_bian_is_four_plates_with_data_second(self):   # SDEM's default: A1 Business, A2 Data, A3 Application, A4 Technology
         import sdem_desnre as d
         src = self.tmp / 'core-src'; src.mkdir()
-        ex = SDEM / 'examples' / 'card-fraud-alerts'
+        ex = _ex('card-fraud-alerts')
         for f in ('a1-business.json', 'a3-application.json', 'a4-technology.json'): shutil.copy(ex / f, src / f)
         m = json.loads((ex / 'mappings.json').read_text())
         m['mappings'] = [x for x in m['mappings'] if not x['source']['type'].startswith('A2.') and not x['target']['type'].startswith('A2.')]

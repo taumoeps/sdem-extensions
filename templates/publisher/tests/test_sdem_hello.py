@@ -7,7 +7,7 @@ sys.path.insert(0, str(HERE))
 import sdem_hello as H   # noqa: E402
 
 SDEM = Path(os.environ.get('SDEM_HOME') or next((d / n for d in HERE.parents for n in ('sdem', 'bian-sdem-framework') if (d / n / 'sdem' / 'cli.py').is_file()), HERE.parents[2] / 'bian-sdem-framework'))   # an SDEM checkout beside this repository, however deep the extension sits
-EXAMPLE = SDEM / 'examples' / 'payment-initiation'
+EXAMPLE = SDEM / 'examples' / '0.20' / 'library-holds'   # SDEM 0.22: the core's own example — a publisher needs no BIAN (the banking ones are sdem-bian's)
 
 
 def run(*argv):

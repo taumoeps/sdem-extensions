@@ -378,7 +378,7 @@ def build(ws, scale, topology=True, environment='production'):
             break
 
     return {
-        'source': {'workspace': os.path.basename(os.path.normpath(ws)), 'generator': GENERATOR},
+        'source': {'workspace': os.path.basename(os.path.abspath(ws)), 'generator': GENERATOR},
         'counts': {'records': len(nodes), 'inner': len(inner), 'mappings': len(cross), 'proposed': sum(1 for c in cross if c[2] == 0)},
         'environment': environment,
         'zone_links': zone_links + [x for ls in zone_links_by_layer.values() for x in ls],
@@ -443,7 +443,7 @@ def build_integrity(ws, scale, what='--graph'):
         return GRAPH_LOOK.get(x['code']) or PLATE_LOOK.get(L.get('id'), (x['name'], '', '#9aa0a6'))
     tech = next((i for i, x in enumerate(g['graphs']) if (stack.get(x['code']) or {}).get('id') == 'technology'), len(codes) - 1)
     c = g['counts']
-    return {'source': {'workspace': os.path.basename(os.path.normpath(ws)), 'generator': GENERATOR, 'from': 'sdem model integrity ' + what},
+    return {'source': {'workspace': os.path.basename(os.path.abspath(ws)), 'generator': GENERATOR, 'from': 'sdem model integrity ' + what},
             'counts': {'records': c['records'], 'inner': c['inside'], 'mappings': c['between'] + c['proposed'], 'proposed': c['proposed']},
             'environment': 'all', 'zone_links': [], 'scale': scale, 'zones': zones, 'nodes': nodes, 'edges': edges,
             'layers': [{'code': x['code'], 'name': look(x)[0], 'sub': look(x)[1], 'color': look(x)[2]} for x in g['graphs']], 'zoneLayer': tech}
@@ -524,7 +524,7 @@ def build_020(ws, scale, environment='production'):
         edges.append([idx[a], idx[b], ok, rel] + ([imp] if imp else []))
     tech = next(i for i, L in enumerate(stack) if L['id'] == 'technology')
     return {
-        'source': {'workspace': os.path.basename(os.path.normpath(ws)), 'generator': GENERATOR},
+        'source': {'workspace': os.path.basename(os.path.abspath(ws)), 'generator': GENERATOR},
         'counts': {'records': len(nodes), 'inner': len(inner), 'mappings': len(cross), 'proposed': sum(1 for c in cross if c[2] == 0)},
         'environment': environment, 'zone_links': zone_links, 'scale': round(scale * min(fits + [1]), 3),
         'zones': zones, 'nodes': nodes, 'edges': edges,
